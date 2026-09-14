@@ -54,9 +54,10 @@ ln -sfn "$LOG_FILE" "$LOG_DIR/latest.log"
 find "$LOG_DIR" -name '*.log' -mtime +30 -delete 2>/dev/null || true
 exec > >(tee -a "$LOG_FILE") 2>&1
 
-run_with_progress() {
-  # run_with_progress <label> <command...>: stream the command's output, with a heartbeat every 20
-  # seconds so a long step does not look like a hang to whoever is watching the apply.
+try_with_progress() {
+  # try_with_progress <label> <command...>: stream the command's output, with a heartbeat every 20
+  # seconds so a long step does not look like a hang to whoever is watching the apply. Returns the
+  # command's status, for the caller that treats some failure as something other than fatal.
   local label="$1"
   shift
   local started=$SECONDS
@@ -66,7 +67,12 @@ run_with_progress() {
     sleep 20
     kill -0 "$pid" 2>/dev/null && echo "    ... $label ($((SECONDS - started))s)"
   done
-  wait "$pid" || die "$label failed"
+  wait "$pid"
+}
+
+run_with_progress() {
+  # The fatal form, which is what nearly every step wants.
+  try_with_progress "$@" || die "$1 failed"
 }
 
 download() {
@@ -108,7 +114,7 @@ sudo -n true 2>/dev/null || sudo -v || die "the development user needs sudo"
 # connects, so wait for it rather than race it.
 if command -v cloud-init >/dev/null; then
   cloud_init_status=0
-  run_with_progress "cloud-init" sudo cloud-init status --wait || cloud_init_status=$?
+  try_with_progress "cloud-init" sudo cloud-init status --wait || cloud_init_status=$?
   case "$cloud_init_status" in
     0) ;;
     2) log "cloud-init completed with recoverable warnings"; sudo cloud-init status --long || true ;;
@@ -318,7 +324,7 @@ fi
 
 log "claude"
 # `claude update` is a version check when current; the installer downloads the binary every time.
-if [[ ! -x "$HOME/.local/bin/claude" ]] || ! run_with_progress "Claude update" "$HOME/.local/bin/claude" update; then
+if [[ ! -x "$HOME/.local/bin/claude" ]] || ! try_with_progress "Claude update" "$HOME/.local/bin/claude" update; then
   download "Claude installer" https://claude.ai/install.sh /tmp/claude-install.sh
   run_with_progress "Claude install" bash /tmp/claude-install.sh
   rm -f /tmp/claude-install.sh
