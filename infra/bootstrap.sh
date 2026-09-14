@@ -86,8 +86,34 @@ latest_github_tag() {
     "https://api.github.com/repos/$1/releases/latest" | jq -r '.tag_name | ltrimstr("v")'
 }
 
+# A package upgrade restarts the service it replaces, and openssh-server's restart takes down the
+# ssh session this script runs in — which kills the script, and leaves the caller with a channel
+# that closed without a status. Deny every service action for the duration of the upgrade, record
+# what was denied, and let the reboot at the end of the run apply them. Scoped to the upgrade: the
+# install transaction after it must be free to start what it installs.
+#
+# Two mechanisms restart services, and both have to be stopped: dpkg's maintainer scripts, which
+# consult policy-rc.d, and needrestart's apt hook, which does not and takes NEEDRESTART_SUSPEND
+# instead. apt() below adds that variable exactly while the shield file exists.
+APT_RESTART_SHIELD=/usr/sbin/policy-rc.d
+APT_DENIED_RESTARTS=/run/loady-bootstrap-denied-restarts
+
+shield_service_restarts() {
+  sudo rm -f "$APT_DENIED_RESTARTS"
+  printf '%s\n' '#!/bin/sh' "echo \"\$1\" >>$APT_DENIED_RESTARTS" 'exit 101' \
+    | sudo tee "$APT_RESTART_SHIELD" >/dev/null
+  sudo chmod 0755 "$APT_RESTART_SHIELD"
+}
+
+unshield_service_restarts() {
+  sudo rm -f "$APT_RESTART_SHIELD"
+  # Ubuntu's own flag file, which the end of this script already acts on.
+  [[ ! -s "$APT_DENIED_RESTARTS" ]] || sudo touch /var/run/reboot-required
+}
+
 bootstrap_finished() {
   local status=$?
+  sudo rm -f "$APT_RESTART_SHIELD" 2>/dev/null || true
   ((status == 0)) || echo "loady-vm-bootstrap: failed after $((SECONDS - bootstrap_started))s; log: $LOG_FILE" >&2
   return $status
 }
@@ -131,7 +157,9 @@ apt() {
   if [[ "$1" == update ]]; then
     deadline=(timeout --signal=TERM --kill-after=30s 5m)
   fi
-  run_with_progress "$operation" "${deadline[@]}" sudo env DEBIAN_FRONTEND=noninteractive apt-get \
+  local -a apt_env=(DEBIAN_FRONTEND=noninteractive)
+  [[ ! -e "$APT_RESTART_SHIELD" ]] || apt_env+=(NEEDRESTART_SUSPEND=1)
+  run_with_progress "$operation" "${deadline[@]}" sudo env "${apt_env[@]}" apt-get \
     -o DPkg::Lock::Timeout=600 \
     -o Acquire::Retries=3 \
     -o Acquire::http::Timeout=30 \
@@ -201,7 +229,9 @@ apt_repo git-core "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0xF911A
 # --------------------------------------------------------------------------------------------------
 log "apt upgrade"
 apt_update
+shield_service_restarts
 apt upgrade --with-new-pkgs -y
+unshield_service_restarts
 
 log "development packages"
 apt install -y --no-install-recommends \
@@ -348,6 +378,12 @@ export AZURE_FUNCTIONS_ENVIRONMENT=Localhost
 export EnvironmentName=Localhost
 # AppDbContextDesignFactory falls back to this when no --connection argument is given.
 export loady_relational_database_connection='Server=localhost,1433;Database=loady;User Id=sa;Password=Passw0rd!;TrustServerCertificate=True;'
+# The Cosmos emulator's self-signed certificate goes into the system trust store, which .NET and
+# curl read; Node reads only its own compiled-in bundle, so it is pointed at the copy
+# scripts/cosmos-cert.sh writes. Guarded because a NODE_EXTRA_CA_CERTS naming a file that does not
+# exist yet makes every node process warn on startup.
+[ -f /usr/local/share/loady/cosmos-emulator.pem ] \
+  && export NODE_EXTRA_CA_CERTS=/usr/local/share/loady/cosmos-emulator.pem
 export PATH=\$HOME/.local/bin:\$HOME/.dotnet/tools:\$DOTNET_ROOT:\$PATH"
 if [[ "$(cat "$profile" 2>/dev/null || true)" != "$profile_content" ]]; then
   echo "$profile_content" | sudo tee "$profile" >/dev/null

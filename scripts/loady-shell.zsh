@@ -62,6 +62,10 @@ ld-logs()    { ld_run scripts/ld-dev.sh logs "$@"; }
 ld-build()   { ld_run scripts/ld-dev.sh build "$@"; }
 ld-seed()    { ld_run scripts/ld-dev.sh seed "$@"; }
 ld-reset()   { ld_run scripts/ld-reset.sh "$@"; }
+# The Cosmos emulator's self-signed certificate, into this machine's trust store. ld-start does
+# this itself; run it by hand after an emulator reset done another way, or with --print to copy
+# the certificate to the Mac for a browser or a Mac-side client.
+ld-cosmos-cert() { ld_run scripts/cosmos-cert.sh "$@"; }
 
 # The frontend dev server in local mode: the four variables frontend.ps1 exports, without needing
 # PowerShell on the machine. Defaults are that script's defaults.

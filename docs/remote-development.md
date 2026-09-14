@@ -87,6 +87,7 @@ ld-fe               # the frontend dev server in local mode
 ld-status           # every host, the containers, and who holds the slot
 ld-logs Loady.Backend.Api
 ld-stop
+ld-cosmos-cert      # trust the Cosmos emulator's certificate; ld-start already does it
 ```
 
 `ld-start` is the Linux equivalent of `backend/backend.ps1`, which is Windows-only where it matters
@@ -106,10 +107,10 @@ They pass the connection string as `-- --connection ...` rather than relying on 
 because `AppDbContextDesignFactory` reads the argument first and only that is guaranteed to be
 present in an agent's non-interactive shell.
 
-## Two Linux-only defects, and why the fixes exist
+## Three Linux-only defects, and why the fixes exist
 
-Both are invisible on macOS and Windows, and both break the same path: browser → frontend → `apim`
-container → function host. Neither is fixed by editing `loady-one`.
+All three are invisible on macOS and Windows, and none of them is fixed by editing `loady-one`. The
+first two break the same path: browser → frontend → `apim` container → function host.
 
 1. **`backend/nginx.conf` proxies to `host.docker.internal`.** Docker Desktop invents that name;
    Docker Engine on Linux does not have it, and nginx fails to resolve it at startup. Fixed with
@@ -121,10 +122,23 @@ container → function host. Neither is fixed by editing `loady-one`.
    symptom is a 502 with no other clue. `bootstrap.sh` allows inbound from `172.16.0.0/12` to
    exactly the ports in `compose/processes.json` — not a blanket rule, because the compose bridge
    is named dynamically and a blanket rule outlives its reason.
+3. **Nothing trusts the Cosmos emulator's certificate.** The emulator serves HTTPS with a
+   certificate it generates into its own data volume, so it is new after every `ld-reset`. On
+   Windows and macOS the installer, or Keychain Access by hand, puts it in the system trust store;
+   on Linux nothing does, and every .NET or Node client that reaches `https://localhost:8081`
+   fails the handshake with an untrusted root. `scripts/cosmos-cert.sh` takes the certificate from
+   the handshake itself and installs the chain's root into
+   `/usr/local/share/ca-certificates` — the store OpenSSL, curl and .NET on Linux read — plus a
+   copy at `/usr/local/share/loady/cosmos-emulator.pem` for `NODE_EXTRA_CA_CERTS`, because Node
+   reads only its own bundle. `ld-start` runs it after the emulator reports ready, so the trust
+   store follows a reset; `ld-cosmos-cert` runs it by hand. The alternative, turning off
+   certificate validation in the client, would mean editing `loady-one`, which rule 1 forbids.
+
+   For a browser or a client on the Mac, `ld-vm 'ld-cosmos-cert --print' > cosmos.pem` writes the
+   same certificate out; add it to the login keychain as **Always Trust**.
 
 Related: the function hosts are started with `ASPNETCORE_URLS=http://0.0.0.0:<port>` so they listen
-where nginx can reach them, and the Cosmos emulator's self-signed certificate is installed into the
-system trust store, which on Windows and macOS the installer does and on Linux nothing does.
+where nginx can reach them.
 
 ## Ports
 

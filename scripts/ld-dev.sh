@@ -76,6 +76,9 @@ start_containers() {
     'docker exec sqlserver /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -Q "SELECT 1" 2>/dev/null
      || docker exec sqlserver /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -Q "SELECT 1"'
   ld_wait_for "cosmosdb" 600 curl -fsSk https://localhost:8081/_explorer/emulator.pem
+  # The emulator generates its certificate into its data volume, so it is new after every reset and
+  # the trust store has to follow it. Idempotent: a no-op when it is already the trusted one.
+  "$HERE/cosmos-cert.sh"
 }
 
 build() {

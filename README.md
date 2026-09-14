@@ -39,6 +39,7 @@ scripts/         the ld-* commands
 | `ld-tfd [--force]`                                       | create or rebuild the VM end to end, including bootstrap and warm-up |
 | `ld-start [--public]`, `ld-stop`, `ld-status`, `ld-logs` | the function hosts and containers                                    |
 | `ld-reset [--hard]`                                      | recreate the containers from scratch                                 |
+| `ld-cosmos-cert [--print]`                               | trust the Cosmos emulator's certificate (`ld-start` does it already) |
 | `ld-build`, `ld-seed`, `ld-fe`                           | build, seed, frontend dev server                                     |
 | `ld-add`, `ld-update`, `ld-remove`                       | EF migrations                                                        |
 | `ld-stn`, `ld-st`, `ld-stl`, `ld-str`                    | worktrees                                                            |
