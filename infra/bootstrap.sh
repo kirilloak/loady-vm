@@ -547,7 +547,7 @@ if [[ -d "$VM_REPO/.git" ]]; then
 fi
 
 log "loady commands"
-for command_name in ld-reset ld-start ld-stop ld-status ld-build ld-fe ld-agents; do
+for command_name in ld-reset ld-start ld-stop ld-status ld-build ld-fe ld-agents ld-cosmos-cert; do
   zsh -lic "whence -w $command_name" 2>/dev/null | grep -qx "$command_name: function" \
     || die "$command_name is not available in the VM login shell"
 done
@@ -568,6 +568,15 @@ if [[ -d "$REPO/.git" ]]; then
   id -nG | tr ' ' '\n' | grep -qx docker || docker_cmd=(sudo docker)
   run_with_progress "container images" env LOADY_REPO_DIR="$REPO" "${docker_cmd[@]}" compose \
     --project-directory "$VM_REPO/compose" -f "$VM_REPO/compose/loady-vm.yaml" pull --quiet
+
+  # The Cosmos emulator's certificate can only be taken from a running emulator, so a first
+  # bootstrap cannot install it — ld-start does, every time. This is for the other case: a converge
+  # on a VM where the stack is already up, where the trust store should be correct when this
+  # returns. Silent and non-fatal when the emulator is not listening, which is the normal case.
+  if curl -fsSk --max-time 5 -o /dev/null https://localhost:8081/ 2>/dev/null; then
+    log "Cosmos emulator certificate"
+    "$VM_REPO/scripts/cosmos-cert.sh" || log "could not trust the emulator certificate; 'ld-cosmos-cert' after the next ld-start"
+  fi
 else
   die "$REPO was not cloned"
 fi

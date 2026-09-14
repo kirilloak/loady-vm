@@ -53,6 +53,7 @@ One fact, one file. Two files stating the same thing will disagree eventually.
 |---|---|
 | The VM: sizing, address, image, lifecycle | `infra/*.tf` and `infra/README.md` |
 | What is installed and configured inside the VM | `infra/bootstrap.sh` |
+| Running the bootstrap detached, and attaching to it | `infra/run-bootstrap.sh` |
 | Converging the VM from the Mac | `infra/setup.sh` |
 | Architecture, Rider, ports, boundaries, streams | `docs/remote-development.md` |
 | The Bitwarden register and recovery | `docs/manual-secrets.md` |
@@ -89,6 +90,13 @@ working tree — under rule 2 it usually is not clean.
 **Evidence.** Ground claims in the files, the live code and real command output. Keep verified
 fact, inference and recommendation apart. Never invent a file, an output, an API behaviour or a
 completed action. Read the first real failure, not the last line.
+
+**Where work runs.** Run commands on the VM, over `ssh`. Nothing downloads a package, a binary, an
+image or an archive onto the Mac: the VM's link is much faster, and under rule 4 the Mac is a
+client. `ld-vm '<command>'` and `infra/setup.sh`, which carries only the script and does every
+download on the VM, are the shapes to copy. Terraform is the exception that has to run on the Mac,
+because it talks to the Proxmox API, and the Ubuntu image it manages is fetched by the Proxmox node
+rather than by either machine.
 
 **Verification.** Match the check to the risk: `shellcheck` and `bash -n` for shell,
 `terraform fmt -check` and `terraform validate` for Terraform, `docker compose config` for compose

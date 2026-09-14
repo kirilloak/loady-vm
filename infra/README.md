@@ -144,8 +144,16 @@ retry converge after a download that completed remotely but failed before Terraf
 - **Rotate a key**: update the field in Bitwarden, then `ld-tfin && ld-vm-setup`.
 - **Change what the VM has**: edit `bootstrap.sh`, then either command above.
 
+Each bootstrap runs on the VM as the systemd unit `loady-bootstrap`, started by `run-bootstrap.sh`,
+and the caller holds nothing but its log. The run therefore survives the connection that started it:
+the bootstrap replaces `openssh-server` under itself and takes a quarter of an hour, so a session
+that owned it would lose it to any dropped channel. A caller that disconnects re-attaches by running
+the same command again, which follows the run already in progress rather than starting a second one.
+
 Each bootstrap streams its output to the caller and writes the same to a 0600 log inside the VM,
-with a stable `latest.log` symlink; logs older than 30 days are removed automatically.
+with a stable `latest.log` symlink; logs older than 30 days are removed automatically. While a run
+is live, `journalctl` knows nothing about it: the unit's output goes to `/run/loady-bootstrap/log`,
+which is what the caller is following.
 
 ```bash
 ld-vm 'tail -n 200 ~/.local/state/loady-vm/bootstrap/latest.log'

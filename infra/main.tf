@@ -9,6 +9,7 @@ locals {
   )
   ipv4_address   = split("/", var.ipv4_cidr)[0]
   bootstrap_path = "${path.module}/bootstrap.sh"
+  runner_path    = "${path.module}/run-bootstrap.sh"
 }
 
 resource "proxmox_download_file" "ubuntu_cloud_image" {
@@ -138,6 +139,13 @@ resource "terraform_data" "bootstrap" {
     destination = "/home/dev/.cache/loady-bootstrap/bootstrap.sh"
   }
 
+  # The bootstrap runs as a systemd unit rather than as a child of this connection, so that losing
+  # the channel costs an attach rather than the run. run-bootstrap.sh beside this file owns that.
+  provisioner "file" {
+    source      = local.runner_path
+    destination = "/home/dev/.cache/loady-bootstrap/run-bootstrap.sh"
+  }
+
   # Secrets travel in a 0600 file rather than as process arguments, so they are not visible in the
   # remote command line or in Terraform's output. The base64 round trip keeps multi-line key
   # material intact through the template.
@@ -149,11 +157,12 @@ resource "terraform_data" "bootstrap" {
   }
 
   provisioner "remote-exec" {
-    # The environment file exists only for this run, is readable only by dev, and is removed on
-    # either outcome. Keeping secrets out of the command is what lets Terraform show progress.
+    # The runner takes the environment file over to the run's own copy and removes this one, so the
+    # keys are off this path as soon as the run starts. Keeping secrets out of the command is what
+    # lets Terraform show progress.
     inline = [
       "chmod 600 /home/dev/.cache/loady-bootstrap/environment",
-      "trap 'rm -f /home/dev/.cache/loady-bootstrap/bootstrap.sh /home/dev/.cache/loady-bootstrap/environment; rmdir /home/dev/.cache/loady-bootstrap 2>/dev/null || true' EXIT; set -a; . /home/dev/.cache/loady-bootstrap/environment; set +a; bash /home/dev/.cache/loady-bootstrap/bootstrap.sh || { status=$?; echo \"Bootstrap failed with status $status; inspect with: ssh loady-vm tail -n 200 ~/.local/state/loady-vm/bootstrap/latest.log\" >&2; exit $status; }",
+      "bash /home/dev/.cache/loady-bootstrap/run-bootstrap.sh || { status=$?; echo \"Bootstrap failed with status $status; inspect with: ssh loady-vm tail -n 200 ~/.local/state/loady-vm/bootstrap/latest.log\" >&2; exit $status; }",
     ]
   }
 

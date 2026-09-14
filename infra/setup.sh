@@ -18,6 +18,8 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 HOST="${1:-${LD_VM_HOST:-loady-vm}}"
 BOOTSTRAP="$ROOT_DIR/bootstrap.sh"
+RUNNER="$ROOT_DIR/run-bootstrap.sh"
+REMOTE_DIR=/home/dev/.cache/loady-bootstrap
 
 # ssh forwards this Mac's LC_* to the VM, whose only locale is C.UTF-8; anything else makes every
 # perl-based apt step warn. Forward one the VM has.
@@ -46,12 +48,19 @@ env_file="$(
     || printf 'export LD_SECRET_SSH_GIT_BASE64=%q\n' "$TF_VAR_loady_ssh_git_base64"
 )"
 
-# The secrets travel as a 0600 file over stdin rather than as process arguments, and are removed
-# with the script on either outcome.
-scp -q "$BOOTSTRAP" "$HOST:/tmp/loady-vm-bootstrap.sh"
-printf '%s\n' "$env_file" | ssh "$HOST" 'umask 077 && cat >/tmp/loady-vm-bootstrap.env'
-# The VM's login shell is zsh after the first run, so bash sources the environment explicitly.
-ssh -t "$HOST" 'trap "rm -f /tmp/loady-vm-bootstrap.sh /tmp/loady-vm-bootstrap.env" EXIT; bash -c "set -a; . /tmp/loady-vm-bootstrap.env; set +a; bash /tmp/loady-vm-bootstrap.sh"'
+# The secrets travel as a 0600 file over stdin rather than as process arguments. run-bootstrap.sh
+# moves that file to the run's own copy and removes this one as the run starts, and removes the copy
+# when it ends.
+# shellcheck disable=SC2029  # REMOTE_DIR is this script's own constant, and expanding it here is
+# what puts the path in the remote command.
+ssh "$HOST" "install -d -m 700 $REMOTE_DIR"
+scp -q "$BOOTSTRAP" "$RUNNER" "$HOST:$REMOTE_DIR/"
+# shellcheck disable=SC2029
+printf '%s\n' "$env_file" | ssh "$HOST" "umask 077 && cat >$REMOTE_DIR/environment"
+# The bootstrap runs as a systemd unit, so this connection carries only its log: losing it loses
+# nothing, and running this again attaches to the run still in progress. The VM's login shell is
+# zsh after the first run, hence bash explicitly.
+ssh -t "$HOST" "bash $REMOTE_DIR/run-bootstrap.sh"
 
 trap - ERR
 # The bootstrap schedules the reboot Ubuntu asks for on a 15-second timer, so this normally returns
