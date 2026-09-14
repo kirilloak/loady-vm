@@ -11,6 +11,7 @@ tracked file here equal to its live counterpart.
 |---|---|
 | `ai/instructions.md` | `~/.claude/CLAUDE.md` and `~/.codex/AGENTS.md` |
 | `ai/claude/settings.json` | `~/.claude/settings.json` |
+| `ai/claude/mcp.json` | the `mcpServers.rider` entry in `~/.claude.json` |
 | `ai/codex/config.toml` | `~/.codex/config.toml` |
 | `rider/forwardedPorts.xml` | `backend/.idea/.idea.Loady/.idea/forwardedPorts.xml` in the checkout |
 | `rider/indexLayout.xml` | the same directory |
@@ -38,6 +39,9 @@ Either side may be edited. The content each pair was last synced to is kept unde
   named in `.../dotfiles/CONFLICT`, and a Claude session prints it on start. Resolve by copying the
   side you want over the other; the next sync sees them equal and clears the marker;
 - a pair with no history lets the more recently written side win, which happens once per pair.
+
+Claude's `~/.claude.json` also holds machine-local state, so it is the exception: the sync merges
+the tracked `mcpServers.rider` entry into that file and leaves every other key untouched.
 
 Writes are temp-and-rename and mode 0600. The script never runs git: a change that lands here is a
 working-tree change to commit (`AGENTS.md` rule 2).
@@ -67,6 +71,13 @@ the port table in `docs/remote-development.md` through Rider's Ports tool window
 the change syncs back here.
 
 `rider/README.md` holds the settings a project file cannot carry.
+
+## Manual configuration
+
+In Rider, enable the MCP server and expose only the router:
+
+1. Open **Tools > MCP Server** and select **Enable MCP Server**.
+2. Open **Tools > MCP Server > Exposed Tools** and select **Enable Router Only Mode**.
 
 ## Verifying a change
 

@@ -4,6 +4,7 @@
 
 model_reasoning_effort = "medium"
 project_doc_max_bytes = 65536
+model = "gpt-5.6-sol"
 
 # Trust roots, so Codex reads these without asking. The home directory covers a worktree created
 # after this file was written.
@@ -18,3 +19,9 @@ trust_level = "trusted"
 
 [projects."/home/dev/loady-worktrees"]
 trust_level = "trusted"
+
+[mcp_servers.rider]
+url = "http://127.0.0.1:64482/stream"
+
+[tui.model_availability_nux]
+gpt-6-astra = 4

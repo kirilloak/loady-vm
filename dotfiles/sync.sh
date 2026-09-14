@@ -126,6 +126,38 @@ sync_pair() {
   cp "$tracked" "$state"
 }
 
+sync_claude_mcp() {
+  # Claude keeps user-scoped MCP servers in ~/.claude.json alongside machine-local state. Merge
+  # the tracked Rider entry instead of syncing the whole file and overwriting that state.
+  local tracked="$DOTFILES_DIR/ai/claude/mcp.json"
+  local live="$HOME_DIR/.claude.json"
+  local tmp
+
+  [[ -f "$tracked" ]] || { echo "    missing in repository: ai/claude/mcp.json"; return 0; }
+  jq -e '.mcpServers.rider | type == "object"' "$tracked" >/dev/null
+
+  mkdir -p "$(dirname "$live")"
+  if [[ ! -f "$live" ]]; then
+    tmp="$(mktemp "$(dirname "$live")/.sync.XXXXXX")"
+    printf '{}\n' >"$tmp"
+    chmod 600 "$tmp"
+    mv "$tmp" "$live"
+  fi
+
+  if jq -e --slurpfile tracked "$tracked" \
+    '.mcpServers.rider == $tracked[0].mcpServers.rider' "$live" >/dev/null; then
+    return 0
+  fi
+
+  tmp="$(mktemp "$(dirname "$live")/.sync.XXXXXX")"
+  jq --slurpfile tracked "$tracked" \
+    '.mcpServers = ((.mcpServers // {}) + {rider: $tracked[0].mcpServers.rider})' \
+    "$live" >"$tmp"
+  chmod 600 "$tmp"
+  mv "$tmp" "$live"
+  echo "    -> ~/.claude.json (mcpServers.rider)"
+}
+
 case "${1:-sync}" in
   --check)
     if [[ -s "$CONFLICT_FILE" ]]; then
@@ -173,5 +205,6 @@ echo "==> dotfiles"
 for entry in "${MANIFEST[@]}"; do
   sync_pair "$entry"
 done
+sync_claude_mcp
 [[ -s "$CONFLICT_FILE" ]] && exit 1
 exit 0

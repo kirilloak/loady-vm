@@ -81,9 +81,12 @@ ld_compose up -d
 # relied on to carry a tool to check itself with, and the seeders fail confusingly against a
 # half-started emulator rather than waiting.
 # shellcheck disable=SC2016  # $MSSQL_SA_PASSWORD must expand inside the container, not here
-ld_wait_for "sqlserver" 180 bash -c \
-  'docker exec sqlserver /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -Q "SELECT 1" 2>/dev/null
-   || docker exec sqlserver /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -Q "SELECT 1"'
+ld_wait_for "sqlserver" 180 docker exec sqlserver sh -c \
+  'if [ -x /opt/mssql-tools18/bin/sqlcmd ]; then
+     exec /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -Q "SELECT 1"
+   else
+     exec /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -Q "SELECT 1"
+   fi'
 ld_wait_for "cosmosdb" 600 curl -fsSk https://localhost:8081/_explorer/emulator.pem
 
 # The emulator generates its certificate into its data volume, so it is new after every reset and
