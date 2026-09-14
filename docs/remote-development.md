@@ -23,8 +23,8 @@ work is latency-bound rather than bandwidth-bound, so wired 1 GbE on the LAN is 
 |---|---|
 | Rider backend, ReSharper, indexing | JetBrains Client rendering |
 | `dotnet restore`, `build`, `test`, the debugger | keyboard, clipboard, notifications |
-| Docker, the containers, the function hosts | browser, through forwarded ports |
-| the frontend dev server | Bitwarden |
+| Docker and the five backing-service containers | browser, through forwarded ports |
+| function hosts and the frontend dev server, from Rider | Bitwarden |
 | `claude`, `codex`, git, every `ld-*` command | `ssh`, `tmux attach`, `vm-start`/`vm-stop`, the Terraform root |
 
 ## One VM at a time
@@ -64,10 +64,10 @@ optional slug, on its own or behind `feature/`, `bugfix/` or `chore/`. `--any` i
 Three things follow from the machine:
 
 1. **`loady-one` stays clean.** `git worktree add` writes only under `.git/worktrees/`, and the
-   agent instruction files are symlinks into `loady-vm` covered by `.git/info/exclude`, which is
-   local and never pushed. Nothing a teammate pulls changes.
+   agent files and Rider run configurations are symlinks into `loady-vm` covered by
+   `.git/info/exclude`, which is local and never pushed. Nothing a teammate pulls changes.
 2. **Only one stream runs the stack.** Every container pins a name and a host port and the function
-   hosts bind fixed ports, so `ld-start` claims a `loadystack` slot and a second one is refused by
+   hosts bind fixed ports, so `ld-reset` claims a `loadystack` slot and a second one is refused by
    name. That is an answer, not an obstacle: stop it there, or do work that does not need it.
    Builds, tests and Rider indexing run in as many worktrees as you like.
 3. **The data is shared.** One SQL Server, one Cosmos emulator. A migration applied in one worktree
@@ -80,20 +80,20 @@ commits automatically and the disk is the only copy.
 ## Running Loady
 
 ```bash
-ld-start            # containers, readiness, build, seed, the five default function hosts
-ld-start --public   # and the six public ones
-ld-reset            # the same, after wiping the containers and volumes (--hard also cleans the build)
-ld-fe               # the frontend dev server in local mode
-ld-status           # every host, the containers, and who holds the slot
-ld-logs Loady.Backend.Api
-ld-stop
-ld-cosmos-cert      # trust the Cosmos emulator's certificate; ld-start already does it
+ld-reset            # wipe and start the five backing services; --hard also cleans the build
+# Rider: be-seeder, then be-test-data-seeder, then all-stack
+# Rider: all-public when the public surface is needed
+ld-cosmos-cert      # refresh Cosmos trust manually; ld-reset already does it
 ```
 
-`ld-start` is the Linux equivalent of `backend/backend.ps1`, which is Windows-only where it matters
-(`taskkill`, `Start-Process` into new windows, the Cosmos Emulator `.exe`). That file is not
-modified and not used; `scripts/ld-dev.sh` and `compose/processes.json` replace it, starting the
-same eleven hosts in the same order with the same pauses.
+Docker runs SQL Server, Cosmos DB, Redis, Azurite and the APIM proxy. Rider runs every application:
+the seeders, eleven function hosts and four frontend modes. The shared configurations live in
+`dotfiles/rider/run/` and `scripts/link-agent-files.sh` links them into each checkout at
+`backend/.run`. `compose/processes.json` remains the source of truth for the host set and ports.
+
+The `all-backend` and `all-public` compounds start their members concurrently. The manifest keeps
+the historical stagger from `backend/backend.ps1` as diagnostic evidence; if a cold start exposes
+that Functions runtime race, start the `be-*` configurations individually in manifest order.
 
 Migrations, replacing the old shell aliases:
 
@@ -130,7 +130,7 @@ first two break the same path: browser → frontend → `apim` container → fun
    the handshake itself and installs the chain's root into
    `/usr/local/share/ca-certificates` — the store OpenSSL, curl and .NET on Linux read — plus a
    copy at `/usr/local/share/loady/cosmos-emulator.pem` for `NODE_EXTRA_CA_CERTS`, because Node
-   reads only its own bundle. `ld-start` runs it after the emulator reports ready, so the trust
+   reads only its own bundle. `ld-reset` runs it after the emulator reports ready, so the trust
    store follows a reset; `ld-cosmos-cert` runs it by hand. The alternative, turning off
    certificate validation in the client, would mean editing `loady-one`, which rule 1 forbids.
 
@@ -158,8 +158,8 @@ through Rider's port forwarding or an SSH tunnel.
 | `7001`, `7152`, `7094` | Backoffice, Loady2Go, Loady2Share | when working on those |
 | `7247`-`7254` | the public APIs | when testing the public surface |
 
-The first six are tracked in `dotfiles/rider/forwardedPorts.xml` and restored automatically. Add
-others through Rider's Ports tool window; the change syncs back to that file.
+All twenty ports are tracked in `dotfiles/rider/forwardedPorts.xml` and restored automatically.
+Changes made through Rider's Ports tool window sync back to that file.
 
 Without Rider:
 
@@ -177,6 +177,9 @@ debugger run on the VM. No project files are mounted or synchronised to the Mac.
 2. Project path `/home/dev/loady-one/backend/Loady.slnx`.
 3. Connect; Gateway downloads the matching backend into the `dev` user's cache.
 4. Apply the settings in `dotfiles/rider/README.md` — SSH agent forwarding **off** above all.
+
+Rider loads the 21 shared `be-*`, `fe-*` and `all-*` configurations directly from `backend/.run`.
+The cold-start order and SSO prerequisite are in `dotfiles/rider/README.md`.
 
 Git to Azure DevOps uses the VM's own key, bound per checkout with `core.sshCommand`, so nothing
 prompts on the headless backend and Rider's credential-helper setting does not apply.

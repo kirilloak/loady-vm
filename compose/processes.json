@@ -1,14 +1,13 @@
 {
   "comment": [
-    "The function hosts ld-dev.sh starts, and the ports ufw lets the apim container reach.",
+    "The function hosts Rider run configurations start, and the ports ufw lets the apim container reach.",
     "This is exactly the set loady-one/backend/backend.ps1 starts, in its order: the five default",
     "hosts, then the public ones behind --public (-IncludePublic there).",
     "Loady.Reports.Api and Loady.Imports.Api are deliberately absent. backend.ps1 does not start",
     "them, and Loady.Imports.Api has no local.settings.json, so it has no local configuration to",
     "start with.",
-    "'wait' is how long ld-dev.sh pauses before the next group, mirroring the Start-Sleep calls in",
-    "backend.ps1: the first two hosts warm the shared runtime and the rest fail to bind if they all",
-    "start at once."
+    "'wait' records the historical stagger from backend.ps1. Rider compounds start concurrently;",
+    "keep the value here as evidence for diagnosing a cold-start race if one reappears."
   ],
   "dotnet": "net10.0",
   "groups": [

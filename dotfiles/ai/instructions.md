@@ -49,10 +49,10 @@ path is correct and lands in the private repository; that is deliberate.
   you are in. `~/loady-one/backend/CLAUDE.md` holds the backend's.
 - **Verify.** `dotnet build` and the focused test for .NET, `yarn lint` for the frontend,
   `shellcheck` for shell. Say plainly what you did not run.
-- **Commands.** `ld-start`, `ld-stop`, `ld-status`, `ld-logs`, `ld-reset`, `ld-build`, `ld-seed`,
-  `ld-fe`, `ld-add`/`ld-update`/`ld-remove` for migrations, `ld-stn`/`ld-stl`/`ld-str` for
-  worktrees. `~/loady-vm/README.md` has the table.
-- **The stack runs in one worktree at a time.** A refusal from `ld-start` naming another worktree
+- **Commands.** `ld-reset`, `ld-cosmos-cert`, `ld-add`/`ld-update`/`ld-remove` for migrations,
+  `ld-stn`/`ld-stl`/`ld-str` for worktrees. Applications run through Rider's shared run
+  configurations. `~/loady-vm/README.md` has the table.
+- **The stack runs in one worktree at a time.** A refusal from `ld-reset` naming another worktree
   is the answer, not an obstacle: stop it there, or do work that does not need it.
 - **One database.** There is a single SQL Server and a single Cosmos emulator on this machine, so a
   migration applied in one worktree is live in all of them.

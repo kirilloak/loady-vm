@@ -126,9 +126,10 @@ retry converge after a download that completed remotely but failed before Terraf
    ld-vm codex
    ```
 
-8. **Run it**: `ld-vm ld-reset`, `ld-vm ld-start`, `ld-vm ld-fe`. Then open the frontend in the
-   Mac's browser through forwarding and confirm a request reaches a function host through `:7000` —
-   that is the check that proves the Linux-specific fixes.
+8. **Run it**: `ld-vm ld-reset`, then in Rider run `be-seeder`, `be-test-data-seeder` and
+   `all-stack`. Open the frontend in the Mac's browser through forwarding and confirm a request
+   reaches a function host through `:7000` — that is the check that proves the Linux-specific
+   fixes.
 
 9. **Rider**: the procedure in `docs/remote-development.md`, then verify indexing, a build, a test
    run, a breakpoint and a push. Confirm the `.idea` directory Rider creates is
@@ -137,7 +138,8 @@ retry converge after a download that completed remotely but failed before Terraf
 ## Operate
 
 - **Anything on the VM without logging in**: `ld-vm <command>` runs it in the VM's login shell from
-  the checkout — `ld-vm ld-status`, `ld-vm 'ld-start --public'`, `ld-vm 'git status'`.
+  the checkout — `ld-vm ld-reset`, `ld-vm ld-cosmos-cert`, `ld-vm 'git status'`. Applications run
+  from Rider.
 - **Power**: `vm-start loady`, `vm-stop loady`, `vm-status`. Starting one workstation VM stops the
   other.
 - **Converge or upgrade**: `ld-tfd`, which loads the register itself, or `ld-tfin && ld-vm-setup`

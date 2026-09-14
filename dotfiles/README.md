@@ -72,6 +72,16 @@ the change syncs back here.
 
 `rider/README.md` holds the settings a project file cannot carry.
 
+## Rider run configurations
+
+`rider/run/*.run.xml` holds the application run configurations shared by every checkout and
+worktree. `scripts/link-agent-files.sh` places that directory at `backend/.run` as a symlink and
+adds a local Git exclusion when needed. Rider edits therefore land directly in this repository;
+these files do not pass through `sync.sh`.
+
+Run `ld-agents` in an existing checkout to create or refresh the link. `ld-stn` does this
+automatically for a new worktree.
+
 ## Manual configuration
 
 In Rider, enable the MCP server and expose only the router:

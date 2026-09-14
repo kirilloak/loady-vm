@@ -22,3 +22,31 @@ machine.
 The project path is `/home/dev/loady-one/backend/Loady.slnx`. Confirm the directory Rider creates
 for its project files: it should be `backend/.idea/.idea.Loady/.idea/`, and if it is not, correct
 `RIDER_DIR` in `dotfiles/sync.sh` to match — the port mapping is synced through that path.
+
+`backend/.run` is linked to this repository by `scripts/link-agent-files.sh`. Rider should list 21
+shared configurations with the `be-`, `fe-` and `all-` prefixes. The Azure Toolkit plugin and
+Rider's JavaScript and Node.js support must be enabled; the four `fe-*` configurations use the
+project Node interpreter and Yarn.
+
+Set **Settings > Tools > Azure Functions > Core Tools executable** to
+`/usr/lib/node_modules/azure-functions-core-tools/bin/func`. Rider's automatic lookup does not
+follow this VM's npm-installed `/usr/bin/func` launcher correctly, although that launcher works in
+the login shell.
+
+## Run configurations
+
+Docker owns only SQL Server, Cosmos DB, Redis, Azurite and the APIM proxy. Start from cold with
+`ld-reset`, then run `be-seeder`, `be-test-data-seeder` and `all-stack` in that order. `all-public`
+starts the six public function hosts when needed. The compound configurations start their members
+concurrently; if a cold start exposes the historical Functions runtime race, start the `be-*`
+members individually in the order recorded by `compose/processes.json`.
+
+The frontend choices are:
+
+- `fe-loady-admin` and `fe-company-admin`: local APIM with fixed local identities.
+- `fe-sso`: local APIM with real dev B2C authentication; pair it with `be-backend-sso`.
+- `fe-dev`: deployed dev APIM with real authentication; no local backend or containers required.
+
+`be-backend-sso` and `be-backend` both use port 7160, so stop one before starting the other. Before
+using the SSO pair, run `az login --use-device-code` on the VM; the backend still reads the dev Key
+Vault, Azure Search and blob accounts through `DefaultAzureCredential`.

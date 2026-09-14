@@ -3,8 +3,8 @@
     <!-- Loady.Seeder -->
     <option name="EXE_PATH" value="$PROJECT_DIR$/src/Seeder/Loady.Seeder/bin/Debug/net10.0/Loady.Seeder" />
     <option name="PROGRAM_PARAMETERS" value="-IncludeSeeders -IncludeMigrations -IncludeSqlMigrations -u" />
-    <!-- The build output, not the project directory: this is where the old ld-dev.sh seed ran it
-         from, and appsettings.Localhost.json resolves relative to the working directory. -->
+    <!-- The build output, not the project directory: appsettings.Localhost.json resolves relative
+         to the working directory. -->
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/src/Seeder/Loady.Seeder/bin/Debug/net10.0" />
     <option name="PASS_PARENT_ENVS" value="1" />
     <envs>

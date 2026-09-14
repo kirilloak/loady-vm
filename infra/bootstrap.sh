@@ -215,8 +215,8 @@ apt_repo() {
 # Deliberately absent: gh (AGENTS.md rule 3 — this machine's remote is Azure DevOps), and the
 # packages.microsoft.com/.../prod repository that carries pwsh and mssql-tools. That repository is
 # keyed by Ubuntu version and lags new releases badly, which would fail the bootstrap on exactly the
-# image it targets. sqlcmd comes from Microsoft's prod repo instead, and PowerShell is not installed at
-# all: ld-fe replaces frontend.ps1 and ld-dev.sh replaces backend.ps1.
+# image it targets. sqlcmd comes from Microsoft's prod repo instead, and PowerShell is not installed
+# at all: Rider run configurations replace frontend.ps1 and backend.ps1.
 # --------------------------------------------------------------------------------------------------
 log "apt sources"
 apt_repo docker https://download.docker.com/linux/ubuntu/gpg \
@@ -587,8 +587,8 @@ elif key_usable "$github_key" "GitHub"; then
 fi
 
 # --------------------------------------------------------------------------------------------------
-# The checkouts: agent files, dotfiles, and a warm cache so Rider's first open and the first
-# ld-start are not a download.
+# The checkouts: agent files, Rider run configurations, dotfiles, and a warm cache so Rider's first
+# open and the first ld-reset are not a download.
 #
 # Nothing here touches a dirty working tree, in either checkout. Under AGENTS.md rule 2 nothing
 # commits automatically, so uncommitted work is the normal state on this machine and the disk is
@@ -608,7 +608,7 @@ if [[ -d "$VM_REPO" ]]; then
 fi
 
 log "loady commands"
-for command_name in ld-reset ld-start ld-stop ld-status ld-build ld-fe ld-agents ld-cosmos-cert; do
+for command_name in ld-reset ld-agents ld-cosmos-cert; do
   zsh -lic "whence -w $command_name" 2>/dev/null | grep -qx "$command_name: function" \
     || die "$command_name is not available in the VM login shell"
 done
@@ -623,7 +623,7 @@ if [[ -d "$REPO/.git" ]]; then
   run_with_progress "dotnet build" dotnet build "$REPO/backend/Loady.slnx" --no-restore --nologo --verbosity quiet
   run_with_progress "yarn install" yarn --cwd "$REPO/frontend" install --frozen-lockfile
 
-  # The container images, so the first ld-start is not a download. The docker group joined above is
+  # The container images, so the first ld-reset is not a download. The docker group joined above is
   # not in this session's groups until the next login, hence sudo when it is missing — and env
   # inside the sudo rather than in front of it, because sudo resets the environment and the compose
   # file requires LOADY_REPO_DIR for the nginx.conf it mounts out of the checkout.
@@ -633,12 +633,12 @@ if [[ -d "$REPO/.git" ]]; then
     --project-directory "$VM_REPO/compose" -f "$VM_REPO/compose/loady-vm.yaml" pull --quiet
 
   # The Cosmos emulator's certificate can only be taken from a running emulator, so a first
-  # bootstrap cannot install it — ld-start does, every time. This is for the other case: a converge
+  # bootstrap cannot install it — ld-reset does, every time. This is for the other case: a converge
   # on a VM where the stack is already up, where the trust store should be correct when this
   # returns. Silent and non-fatal when the emulator is not listening, which is the normal case.
   if curl -fsSk --max-time 5 -o /dev/null https://localhost:8081/ 2>/dev/null; then
     log "Cosmos emulator certificate"
-    "$VM_REPO/scripts/cosmos-cert.sh" || log "could not trust the emulator certificate; 'ld-cosmos-cert' after the next ld-start"
+    "$VM_REPO/scripts/cosmos-cert.sh" || log "could not trust the emulator certificate; 'ld-cosmos-cert' after the next ld-reset"
   fi
 else
   die "$REPO was not cloned"

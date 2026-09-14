@@ -20,9 +20,9 @@
 #                         not been applied. Nothing here is ever reachable from the LAN; the Mac
 #                         reaches it through Rider or SSH forwarding.
 #
-#   healthchecks          ld-start waits for readiness instead of sleeping. SQL Server can check
+#   healthchecks          ld-reset waits for readiness instead of sleeping. SQL Server can check
 #                         itself because the image carries sqlcmd. The Cosmos emulator cannot be
-#                         trusted to carry curl, so ld-start probes it from the host instead.
+#                         trusted to carry curl, so ld-reset probes it from the host instead.
 #
 # LOADY_REPO_DIR is exported by ld_compose in scripts/lib.sh and points at the checkout or worktree
 # the command is running in.
@@ -94,7 +94,7 @@ services:
 
   # PROTOCOL: https is what the backend expects, and the emulator issues its own certificate for it
   # into the data volume — so the certificate is new after every ld-reset. Nothing on Linux trusts
-  # it by default; scripts/cosmos-cert.sh installs it into the system trust store and ld-start runs
+  # it by default; scripts/cosmos-cert.sh installs it into the system trust store and ld-reset runs
   # that on every start. docs/remote-development.md has the reasoning.
   cosmosdb:
     image: mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:vnext-latest

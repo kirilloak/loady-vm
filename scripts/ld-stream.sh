@@ -60,8 +60,8 @@ case "$command" in
       git -C "$PRIMARY" worktree add -b "$branch" "$path" "origin/$BASE"
     fi
 
-    # The two things a fresh worktree needs to be usable: the agent instructions, and Rider's
-    # port mapping, which lives in a per-project .idea directory and is otherwise rebuilt by hand.
+    # The things a fresh worktree needs to be usable: the agent instructions and shared Rider run
+    # configurations, plus Rider's port mapping in the per-project .idea directory.
     "$HERE/link-agent-files.sh" "$path"
     "$(ld_vm_repo)/dotfiles/sync.sh" --seed-worktree "$path" || \
       ld_warn "could not seed the Rider files into the worktree; run dotfiles/sync.sh by hand"
