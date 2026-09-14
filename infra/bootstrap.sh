@@ -274,8 +274,21 @@ log ".NET SDK $DOTNET_CHANNEL"
 # Every run: the installer is a no-op when the channel's latest SDK is already there, and installs
 # it side by side otherwise, which is how the SDK follows global.json's rollForward.
 download ".NET installer" https://dot.net/v1/dotnet-install.sh /tmp/dotnet-install.sh
-run_with_progress ".NET SDK install" sudo bash /tmp/dotnet-install.sh \
-  --channel "$DOTNET_CHANNEL" --install-dir "$DOTNET_ROOT"
+# The installer fetches a 200 MB tarball with a curl of its own, and that curl carries no timeout:
+# when the CDN edge goes silent mid-transfer the run waits on a dead connection rather than failing
+# (seen 2026-09-14 — 189 MB in, then an established socket with nothing arriving for nine minutes).
+# Bound each attempt and open a new connection instead of waiting on that one.
+dotnet_installed=false
+for attempt in 1 2 3; do
+  if try_with_progress ".NET SDK install (attempt $attempt)" \
+    sudo timeout --signal=TERM --kill-after=30s 10m bash /tmp/dotnet-install.sh \
+    --channel "$DOTNET_CHANNEL" --install-dir "$DOTNET_ROOT"; then
+    dotnet_installed=true
+    break
+  fi
+  log ".NET SDK install did not finish; starting over"
+done
+[[ "$dotnet_installed" == true ]] || die ".NET SDK install did not finish in three attempts"
 rm -f /tmp/dotnet-install.sh
 [[ -e /usr/bin/dotnet ]] || sudo ln -s "$DOTNET_ROOT/dotnet" /usr/bin/dotnet
 export DOTNET_ROOT

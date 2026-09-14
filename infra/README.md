@@ -1,7 +1,7 @@
 # The loady-vm Terraform root
 
 Creates one VM, `loady-vm`, on `pve-2` from the Ubuntu Server cloud image: 16 cores of type `host`,
-32 GB without ballooning, a 300 GB raw disk on `local-zfs` (ext4 root, grown on first boot), VirtIO
+32 GB without ballooning, a 500 GB raw disk on `local-zfs` (ext4 root, grown on first boot), VirtIO
 on `vmbr0` with a static address, serial console, no guest agent. Proxmox's cloud-init drive creates
 the `dev` user with the Mac's key and sets the address; that is the only image-level configuration.
 Everything else is `bootstrap.sh`.

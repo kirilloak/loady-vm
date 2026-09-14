@@ -74,7 +74,7 @@ variable "memory_mb" {
 variable "disk_gb" {
   description = "Thin-provisioned on local-zfs: solution, NuGet, node_modules, SQL and Cosmos data"
   type        = number
-  default     = 300
+  default     = 500
 }
 
 variable "ubuntu_image_url" {
