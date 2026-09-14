@@ -42,8 +42,8 @@ prevent them from returning unless **Generate Configurations** is invoked on `la
 ## Run configurations
 
 Docker owns only SQL Server, Cosmos DB, Redis, Azurite and the APIM proxy. Start from cold with
-`ld-reset`, which builds and runs the same primary seeder as `be-seeder`, then run
-`be-test-data-seeder` and `stack-all` in that order. Keep `be-seeder` for rerunning it independently.
+`ld-reset`, which builds and runs both seeders, then run `stack-all`. Keep `be-seeder` and
+`be-test-data-seeder` for rerunning them independently.
 `stack-be-fe` starts only the main backend and frontend, while `stack-public-apis` starts the six
 public function hosts when needed. The compound configurations start their members
 concurrently; if a cold start exposes the historical Functions runtime race, start the `be-*`

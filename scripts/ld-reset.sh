@@ -3,14 +3,14 @@
 #
 # This brings up SQL Server, the Cosmos emulator, Redis, Azurite and the APIM proxy, waits until the
 # two that need waiting for answer, installs the emulator's fresh certificate, then builds and runs
-# Loady.Seeder. Function hosts, the frontend and optional test-data seeding remain run configurations
+# Loady.Seeder and Loady.TestDataSeeder. Function hosts and the frontend remain run configurations
 # in Rider — see dotfiles/rider/run/ and docs/remote-development.md.
 #
 # This is the only stack command. Nothing here starts, stops or inspects a long-running application,
 # because a second way to do what Rider does would disagree with it sooner or later.
 #
 # Usage:
-#   ld-reset.sh            recreate the containers, wait for them and run Loady.Seeder
+#   ld-reset.sh            recreate the containers, wait for them and run both seeders
 #   ld-reset.sh --hard     also dotnet clean the solution first
 set -euo pipefail
 LD_PROG=ld-reset
@@ -18,7 +18,7 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=scripts/lib.sh
 source "$HERE/lib.sh"
 
-ld_need docker jq dotnet
+ld_need az docker jq dotnet
 
 REPO="$(ld_repo)"
 HARD=0
@@ -54,6 +54,14 @@ $(printf '%s\n' "$only_theirs" | sed 's/^/         /')
 }
 
 drift_check
+
+ld_log "checking Azure CLI session"
+if ! az account get-access-token --output none >/dev/null 2>&1; then
+  ld_warn "Azure CLI session is missing or expired; starting device-code login."
+  az login --use-device-code --output none
+  az account get-access-token --output none >/dev/null \
+    || ld_die "Azure CLI login did not produce an active session"
+fi
 
 # Applications are Rider's, so this cannot stop them — and a host left running against a database
 # that is about to be destroyed fails in a way that reads as a code problem. Say so; the founder
@@ -94,9 +102,14 @@ ld_wait_for "cosmosdb" 600 curl -fsSk https://localhost:8081/_explorer/emulator.
 
 SEEDER_DIR="$REPO/backend/src/Seeder/Loady.Seeder"
 SEEDER_OUTPUT="$SEEDER_DIR/bin/Debug/net10.0"
+TEST_DATA_SEEDER_DIR="$REPO/backend/src/Seeder/Loady.TestDataSeeder"
+TEST_DATA_SEEDER_OUTPUT="$TEST_DATA_SEEDER_DIR/bin/Debug/net10.0"
 
 ld_log "building Loady.Seeder"
 dotnet build "$SEEDER_DIR/Loady.Seeder.csproj" --nologo --verbosity minimal
+
+ld_log "building Loady.TestDataSeeder"
+dotnet build "$TEST_DATA_SEEDER_DIR/Loady.TestDataSeeder.csproj" --nologo --verbosity minimal
 
 ld_log "seeding"
 (
@@ -105,4 +118,11 @@ ld_log "seeding"
     dotnet Loady.Seeder.dll -IncludeSeeders -IncludeMigrations -IncludeSqlMigrations -u
 )
 
-ld_log "containers ready and seeded. In Rider: 'be-test-data-seeder', then 'stack-all'."
+ld_log "seeding test data"
+(
+  cd "$TEST_DATA_SEEDER_OUTPUT"
+  AZURE_FUNCTIONS_ENVIRONMENT=Localhost EnvironmentName=Localhost \
+    dotnet Loady.TestDataSeeder.dll
+)
+
+ld_log "containers ready and seeded. In Rider: 'stack-all'."

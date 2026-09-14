@@ -81,16 +81,17 @@ commits automatically and the disk is the only copy.
 
 ```bash
 ld-reset            # wipe, start and seed the five backing services; --hard cleans first
-# Rider: be-test-data-seeder, then stack-all
+# Rider: stack-all
 # Rider: stack-public-apis when the public surface is needed
 ld-cosmos-cert      # refresh Cosmos trust manually; ld-reset already does it
 ```
 
-Docker runs SQL Server, Cosmos DB, Redis, Azurite and the APIM proxy, and `ld-reset` runs the primary
-seeder after they are ready. Rider runs the eleven function hosts and four frontend modes and keeps
-both seeders available for manual runs. The shared configurations live in
-`dotfiles/rider/run/` and `scripts/link-agent-files.sh` links them into each checkout at
-`backend/.run`. `compose/processes.json` remains the source of truth for the host set and ports.
+Docker runs SQL Server, Cosmos DB, Redis, Azurite and the APIM proxy, and `ld-reset` verifies the
+Azure CLI session and runs both seeders after the services are ready. Rider runs the eleven function
+hosts and four frontend modes and keeps both seeders available for manual reruns. The shared
+configurations live in `dotfiles/rider/run/` and `scripts/link-agent-files.sh` links them into each
+checkout at `backend/.run`. `compose/processes.json` remains the source of truth for the host set and
+ports.
 
 The `stack-be-fe`, `stack-all` and `stack-public-apis` compounds start their members concurrently.
 `stack-all` adds Events, Loady2Go and Loady2Share to `stack-be-fe`; it does not include the public

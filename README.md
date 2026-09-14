@@ -70,7 +70,7 @@ workstation VM runs at a time, so `ld-up` (or `vm-start loady`) starts it and st
 | `ld-up [--takeover]`, `ld-down`                          | power the VM on and off                                              |
 | `ld-tfin`                                                | load Terraform secrets and initialize the current root               |
 | `ld-tfd [--force]`                                       | create or rebuild the VM end to end, including bootstrap and warm-up |
-| `ld-reset [--hard]`                                      | recreate the containers from scratch                                 |
+| `ld-reset [--hard]`                                      | recreate the containers and run both seeders                         |
 | `ld-cosmos-cert [--print]`                               | trust the Cosmos emulator's certificate (`ld-reset` does it already) |
 | `ld-add`, `ld-update`, `ld-remove`                       | EF migrations                                                        |
 | `ld-stn`, `ld-st`, `ld-stl`, `ld-str`                    | worktrees                                                            |
