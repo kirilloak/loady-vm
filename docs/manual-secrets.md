@@ -8,45 +8,45 @@ tracked because item ids are identifiers, not secrets.
 
 ## The three items
 
-| Item                        | Fields used                                                                 | Used for                                                                  |
-|-----------------------------|-----------------------------------------------------------------------------|---------------------------------------------------------------------------|
-| `dev-infra/dev-proxmox`     | login password                                                              | `root@pam` on the Proxmox API — creating the VM, and `vm-start`/`vm-stop` |
-| `prod-infra/prod-tailscale` | `api_key`, `tailnet`                                                        | minting the VM's one-hour member auth key                                 |
-| `workstation/loady`         | `ssh_loady_git_base64`                                                      | the one key the bootstrap writes onto the VM, for every git remote        |
+| Item                        | Fields used            | Used for                                                                  |
+|-----------------------------|------------------------|---------------------------------------------------------------------------|
+| `dev-infra/dev-proxmox`     | login password         | `root@pam` on the Proxmox API — creating the VM, and `vm-start`/`vm-stop` |
+| `prod-infra/prod-tailscale` | `api_key`, `tailnet`   | minting the VM's one-hour member auth key                                 |
+| `workstation/loady`         | `ssh_loady_git_base64` | the one key the bootstrap writes onto the VM, for every git remote        |
 
-The first two are shared with the founder's other infrastructure work, deliberately: they describe the
-**host and the tailnet**, which are one Proxmox node and one tailnet whatever runs on them. Duplicating either into a
-Loady-specific item would create a second copy of one credential, and two copies of a credential disagree the first
-time one is rotated.
+The first two are shared with the founder's other infrastructure work, deliberately: they describe the **host and the
+tailnet**, which are one Proxmox node and one tailnet whatever runs on them. Duplicating either into a Loady-specific
+item would create a second copy of one credential, and two copies of a credential disagree the first time one is
+rotated.
 
 The third is Loady's own and holds exactly one field: `06e7a977-9e1f-4641-8e36-b4c50096047a`
 (`workstation/loady`), already created, and `infra/loady-vm/.tf-vars` already points at it.
 
 ## Filling `workstation/loady`
 
-**One field, one key, and no new keys anywhere.** The founder's existing `~/.ssh/loady/id_rsa` is already registered
-on both Azure DevOps and GitHub — verified 2026-09-14, it authenticates to `ssh.dev.azure.com` and to `github.com` as
+**One field, one key, and no new keys anywhere.** The founder's existing `~/.ssh/loady/id_rsa` is already registered on
+both Azure DevOps and GitHub — verified 2026-09-14, it authenticates to `ssh.dev.azure.com` and to `github.com` as
 `kirilloak` — so it serves every git remote this VM talks to and neither profile needs a change.
 
-| What | Key | Where it lives |
-|---|---|---|
-| Mac logs in to the VM | `~/.ssh/id_ed25519`, the Mac's existing main key | Mac only; cloud-init puts the **public** half in the VM's `authorized_keys` |
-| VM → Azure DevOps and GitHub | `~/.ssh/loady/id_rsa`, passphrase removed | copied onto the VM by the bootstrap, as `ssh_loady_git_base64` |
+| What                         | Key                                              | Where it lives                                                              |
+|------------------------------|--------------------------------------------------|-----------------------------------------------------------------------------|
+| Mac logs in to the VM        | `~/.ssh/id_ed25519`, the Mac's existing main key | Mac only; cloud-init puts the **public** half in the VM's `authorized_keys` |
+| VM → Azure DevOps and GitHub | `~/.ssh/loady/id_rsa`, passphrase removed        | copied onto the VM by the bootstrap, as `ssh_loady_git_base64`              |
 
-Reusing the main key for VM login costs nothing: only its public half ever reaches the VM. The git key is different —
-a **private** key lands on the machine — which is why it is the work-scoped Loady key rather than the main personal
-one, and why it is worth knowing that anyone who reaches the VM's `dev` user has it.
+Reusing the main key for VM login costs nothing: only its public half ever reaches the VM. The git key is different — a
+**private** key lands on the machine — which is why it is the work-scoped Loady key rather than the main personal one,
+and why it is worth knowing that anyone who reaches the VM's `dev` user has it.
 
-RSA is not a preference. Azure DevOps accepts only RSA for Git over SSH ([Azure Repos SSH
-documentation](https://learn.microsoft.com/en-us/azure/devops/repos/git/use-ssh-keys-to-authenticate?view=azure-devops),
+RSA is not a preference. Azure DevOps accepts only RSA for Git over SSH
+([Azure Repos SSH documentation](https://learn.microsoft.com/en-us/azure/devops/repos/git/use-ssh-keys-to-authenticate?view=azure-devops),
 updated 2026-08-13, whose only example is `ssh-keygen -t rsa -b 3072`; ED25519 support is still an open request on two
 feedback portals). GitHub accepts RSA too, so one key covers both. Checked twice, 2026-09-14.
 
 ### The passphrase has to go — on a copy
 
-The key on the Mac is encrypted, and an encrypted key cannot be used unattended: the bootstrap's clone, a headless
-Rider backend, a tmux session, `ld-vm git push` and anything an agent runs would each need an `ssh-agent` primed by
-hand after every reboot. Strip it on a **copy**; the original on the Mac keeps its passphrase.
+The key on the Mac is encrypted, and an encrypted key cannot be used unattended: the bootstrap's clone, a headless Rider
+backend, a tmux session, `ld-vm git push` and anything an agent runs would each need an `ssh-agent` primed by hand after
+every reboot. Strip it on a **copy**; the original on the Mac keeps its passphrase.
 
 ```bash
 cp ~/.ssh/loady/id_rsa /tmp/loady-git-vm
@@ -66,7 +66,8 @@ nothing has to be re-registered anywhere.
 
 - Azure DevOps: <https://dev.azure.com/Loady-Logistics/_usersSettings/keys> already lists this key. Add one only if it
   is removed or expires — Azure DevOps enforces key expiry by default, warns seven days ahead, and fails with
-  `remote: Authentication failed: your SSH key has expired`. To re-add, paste `~/.ssh/loady/id_rsa.pub` into **New Key**.
+  `remote: Authentication failed: your SSH key has expired`. To re-add, paste `~/.ssh/loady/id_rsa.pub` into **New
+  Key**.
 - GitHub: <https://github.com/settings/keys> already lists it too.
 
 That page also prints the Azure DevOps server fingerprints, which are what `bootstrap.sh` pins when it writes the VM's
@@ -77,8 +78,8 @@ SHA256  ohD8VZEXGWo6Ez8GSEJQ9WpafgLFsOfLOtGGQCQo6Og   (RSA)
 MD5     97:70:33:82:fd:29:3a:73:39:af:6a:07:ad:f8:80:49
 ```
 
-If the bootstrap ever reports a different host key, compare against that page before doing anything else: it refuses
-to pin a key whose fingerprint does not match, which is the behaviour you want if it ever happens.
+If the bootstrap ever reports a different host key, compare against that page before doing anything else: it refuses to
+pin a key whose fingerprint does not match, which is the behaviour you want if it ever happens.
 
 ### Storing it
 
@@ -98,8 +99,8 @@ store ssh_loady_git_base64 /tmp/loady-git-vm
 rm -P /tmp/loady-git-vm
 ```
 
-The `workstation/loady` line in `infra/loady-vm/.tf-vars` already names this item, so nothing else changes once
-the field exists.
+The `workstation/loady` line in `infra/loady-vm/.tf-vars` already names this item, so nothing else changes once the
+field exists.
 
 ### Checking
 
