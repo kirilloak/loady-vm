@@ -36,8 +36,8 @@ resource "proxmox_virtual_environment_vm" "loady_vm" {
   boot_order      = ["scsi0"]
 
   # on_boot is false on purpose, unlike a server: only one workstation VM may run at a time, and a
-  # host reboot must not bring both up. ld-up is what starts this one, and it refuses while the
-  # other is running.
+  # host reboot must not bring both up. vm-loady is what starts this one, and it shuts the other
+  # one down first.
 
   # No guest agent: the provider would wait for it to report an address, the cloud image has none,
   # and attaching one later costs a cold restart. Ubuntu shuts down cleanly on ACPI without it.

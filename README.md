@@ -53,7 +53,8 @@ The VM itself is built by `infra/README.md`. What the Mac needs, once, so that `
 3. **The commands**, by sourcing `scripts/loady-shell.zsh` as below.
 
 Then `ssh loady-vm true` should succeed. If it does not, the VM is probably powered off: only one
-workstation VM runs at a time, so `ld-up` (or `vm-start loady`) starts it and stops the other.
+workstation VM runs at a time, so `vm-loady` starts it and stops the other. That command lives in
+the costfluent repository, which owns the Proxmox host.
 
 ## Commands
 
@@ -67,7 +68,6 @@ workstation VM runs at a time, so `ld-up` (or `vm-start loady`) starts it and st
 |----------------------------------------------------------|----------------------------------------------------------------------|
 | `ld-vm <cmd>`                                            | run a command on the VM, from the checkout                           |
 | `ld-vm-setup`                                            | converge the VM (rerun the bootstrap)                                |
-| `ld-up [--takeover]`, `ld-down`                          | power the VM on and off                                              |
 | `ld-tfin`                                                | load Terraform secrets and initialize the current root               |
 | `ld-tfd [--force]`                                       | create or rebuild the VM end to end, including bootstrap and warm-up |
 | `ld-reset [--hard]`                                      | recreate the containers and run both seeders                         |

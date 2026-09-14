@@ -41,14 +41,9 @@ ld_run_with_bw_session() {
 # apt step there warns about it.
 ld-vm()       { ssh -t "${LD_VM_HOST:-loady-vm}" -- "export LC_ALL=C.UTF-8; cd ~/loady-one && zsh -lic ${(q)*}"; }
 ld-vm-setup() { ld_run infra/setup.sh "$@"; }
-# The two workstation VMs on the Proxmox host, switched by name: starting one stops the other,
-# because only one may run at a time. `vm-start loady`, `vm-stop dev`, `vm-status`.
-vm-start()    { ld_run scripts/vm.sh start "$@"; }
-vm-stop()     { ld_run scripts/vm.sh stop "$@"; }
-vm-status()   { ld_run scripts/vm.sh status "$@"; }
-# ld-up and ld-down name this VM without repeating which one it is.
-ld-up()       { ld_run scripts/vm.sh start loady "$@"; }
-ld-down()     { ld_run scripts/vm.sh stop loady; }
+# Powering the VMs on and off lives in the costfluent repository, which owns the Proxmox host:
+# `vm-loady`, `vm-dev`, `vm-stop`, `vm-status` there. Only one workstation VM may run at a time,
+# so `vm-loady` starts this one and shuts the other down.
 ld-tfd()      { ld_run_with_bw_session scripts/rebuild-loady-vm.zsh "$@"; }
 
 # ---------------------------------------------------------------------------------------------

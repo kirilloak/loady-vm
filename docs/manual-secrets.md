@@ -10,7 +10,7 @@ tracked because item ids are identifiers, not secrets.
 
 | Item                    | Fields used                  | Used for                                                                      |
 |-------------------------|------------------------------|-------------------------------------------------------------------------------|
-| `dev-infra/dev-proxmox` | login password               | `root@pam` on the Proxmox API — creating the VM, and `vm-start`/`vm-stop`     |
+| `dev-infra/dev-proxmox` | login password               | `root@pam` on the Proxmox API — creating the VM, and `vm-loady`/`vm-dev`      |
 | `workstation/loady`     | `ssh_loady_git_base64`       | the key the bootstrap writes onto the VM for `~/loady-one` (Azure DevOps)     |
 | `workstation/keys`      | `ssh_dev_vm_github_base64`   | the key it writes for `~/loady-vm` (GitHub) — `dev-vm-github`                 |
 | `prod-infra/prod-github`| `pat`                        | `GH_TOKEN` on the VM, and pinning GitHub's SSH host keys from the API         |

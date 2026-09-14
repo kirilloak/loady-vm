@@ -25,7 +25,7 @@ work is latency-bound rather than bandwidth-bound, so wired 1 GbE on the LAN is 
 | `dotnet restore`, `build`, `test`, the debugger | keyboard, clipboard, notifications |
 | Docker and the five backing-service containers | browser, through forwarded ports |
 | function hosts and the frontend dev server, from Rider | Bitwarden |
-| `claude`, `codex`, git, every `ld-*` command | `ssh`, `tmux attach`, `vm-start`/`vm-stop`, the Terraform root |
+| `claude`, `codex`, git, every `ld-*` command | `ssh`, `tmux attach`, `vm-loady`/`vm-dev`, the Terraform root |
 
 ## One VM at a time
 
@@ -33,19 +33,22 @@ There are two workstation VMs on `pve-2` and only one may run: 32 GB each plus t
 overcommits the node, and under memory pressure a guest OOM-kills its own build. From the Mac:
 
 ```bash
-vm-start loady     # stops the other one first, then starts this one
-vm-start dev       # the same, the other way round
-vm-stop loady
+vm-loady     # stops dev-vm first, then starts this one
+vm-dev       # the same, the other way round
+vm-stop      # power off whichever is running
 vm-status
 ```
 
-`vm-start` shuts the other machine down gracefully over ACPI and waits for it to actually stop.
-It is clean, but a build running there is still lost, so it prints what it is stopping before it
-does it. `--no-switch` refuses instead of switching. `ld-up` and `ld-down` are the same thing
-without naming the VM.
+These live in the costfluent repository (`scripts/vm.sh` there), which owns the Proxmox host, and
+are named after the machine wanted rather than after an action: there is no way to start one
+without stopping the other, because the host cannot hold both.
 
-Credentials come from `ld-tfin` if it has run in this shell, and from Bitwarden directly if not,
-so these work as one-off commands anywhere.
+The switch shuts the other machine down gracefully over ACPI and waits for it to actually stop. It
+is clean, but a build running there is still lost, so it prints what it is stopping before it does
+it.
+
+Credentials come from the environment if `tfin` has run in that repository's `dev-vm` root, and
+from Bitwarden directly if not, so these work as one-off commands anywhere.
 
 ## Streams
 

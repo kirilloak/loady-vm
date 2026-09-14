@@ -9,7 +9,7 @@ Everything else is `bootstrap.sh`.
 Architecture and daily use: `docs/remote-development.md`. Secrets: `docs/manual-secrets.md`.
 
 `on_boot` is false on purpose. Only one workstation VM may run at a time, so a host reboot must not
-bring both up; `vm-start loady` is what starts this one, and it stops the other first.
+bring both up; `vm-loady` is what starts this one, and it stops the other first.
 
 No swap, and no balloon device: swapping would turn an exceptional memory overrun into sustained
 disk latency, and a host that can shrink this VM under pressure makes the guest OOM-kill its own
@@ -140,8 +140,8 @@ retry converge after a download that completed remotely but failed before Terraf
 - **Anything on the VM without logging in**: `ld-vm <command>` runs it in the VM's login shell from
   the checkout — `ld-vm ld-reset`, `ld-vm ld-cosmos-cert`, `ld-vm 'git status'`. Applications run
   from Rider.
-- **Power**: `vm-start loady`, `vm-stop loady`, `vm-status`. Starting one workstation VM stops the
-  other.
+- **Power**: `vm-loady`, `vm-stop`, `vm-status`, from the costfluent repository. Starting one
+  workstation VM stops the other.
 - **Converge or upgrade**: `ld-tfd`, which loads the register itself, or `ld-tfin && ld-vm-setup`
   to converge without Terraform (`ld-tfin` is what carries the keys into the shell; without it the
   run stops at the clones). Every run upgrades packages within the configured Ubuntu release,
