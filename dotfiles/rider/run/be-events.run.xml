@@ -1,27 +1,23 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="be-events" type="AzureFunctionAppRun" factoryName="Azure - Run Function">
-    <!-- Loady.Events.Api -->
     <option name="PROJECT_FILE_PATH" value="$PROJECT_DIR$/src/Domains/Loady.Events.Api/Loady.Events.Api.csproj" />
     <option name="LAUNCH_PROFILE_NAME" value="Localhost" />
     <option name="PROJECT_TFM" value="net10.0" />
     <option name="FUNCTION_NAMES" value="" />
     <option name="PROJECT_ARGUMENTS_TRACKING" value="1" />
-    <option name="PROGRAM_PARAMETERS" value="host start --port 7296" />
+    <option name="PROGRAM_PARAMETERS" value="host start --pause-on-error --port 7296" />
     <option name="PROJECT_WORKING_DIRECTORY_TRACKING" value="1" />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/src/Domains/Loady.Events.Api/bin/Debug/net10.0" />
     <option name="TRACK_ENVS" value="0" />
     <envs>
-      <!-- 0.0.0.0, not 127.0.0.1: nginx in the apim container reaches this host across the docker
-           bridge, and a loopback-only host answers it with nothing. Forwarding to the Mac works
-           either way, because a tunnel connects to localhost on this machine.
-           See docs/remote-development.md. -->
+      <env name="EnvironmentName" value="Localhost" />
       <env name="ASPNETCORE_URLS" value="http://0.0.0.0:7296" />
       <env name="AZURE_FUNCTIONS_ENVIRONMENT" value="Localhost" />
-      <env name="EnvironmentName" value="Localhost" />
     </envs>
     <option name="USE_EXTERNAL_CONSOLE" value="0" />
     <option name="TRACK_URL" value="1" />
     <option name="TRACK_BROWSER_LAUNCH" value="0" />
+    <browser url="http://localhost:7296" />
     <method v="2">
       <option name="Build" />
     </method>

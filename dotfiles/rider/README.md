@@ -16,6 +16,7 @@ machine.
   the repository (`frontend/`, `e2etests/`, `infra/`) is otherwise invisible. Machine-local.
 - **Settings > Build > Toolset — the SDK from `backend/global.json`.** Rider normally finds it;
   check it after a .NET SDK upgrade.
+- **Tools > Change Memory Settings (on Host) > 4000 > Save and Restart.**
 
 ## First connection
 
