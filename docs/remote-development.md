@@ -12,9 +12,9 @@ work is latency-bound rather than bandwidth-bound, so wired 1 GbE on the LAN is 
 
 | Concern | Owner |
 |---|---|
-| The VM: sizing, disk, address, the `dev` user, every manual step | `infra/loady-vm/` and its `README.md` |
-| What is installed inside it, and how it is hardened | `infra/loady-vm/bootstrap.sh` |
-| Converging it from the Mac | `infra/loady-vm/setup.sh` (`ld-vm-setup`) |
+| The VM: sizing, disk, address, the `dev` user, every manual step | `infra/` and its `README.md` |
+| What is installed inside it, and how it is hardened | `infra/bootstrap.sh` |
+| Converging it from the Mac | `infra/setup.sh` (`ld-vm-setup`) |
 | Agent and Rider configuration on the VM | `dotfiles/` |
 | The Bitwarden register | `docs/manual-secrets.md` |
 

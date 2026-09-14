@@ -13,12 +13,15 @@ locals {
 }
 
 resource "proxmox_download_file" "ubuntu_cloud_image" {
-  datastore_id   = var.datastore_images
-  node_name      = var.node_name
-  content_type   = "iso"
-  file_name      = basename(var.ubuntu_image_url)
-  url            = var.ubuntu_image_url
-  upload_timeout = 1800
+  # A failed or state-less earlier run can leave this exact file in Proxmox without Terraform
+  # owning it. Replace only that colliding filename with the image configured below, then manage it.
+  datastore_id        = var.datastore_images
+  node_name           = var.node_name
+  content_type        = "iso"
+  file_name           = basename(var.ubuntu_image_url)
+  url                 = var.ubuntu_image_url
+  upload_timeout      = 1800
+  overwrite_unmanaged = true
 }
 
 resource "proxmox_virtual_environment_vm" "loady_vm" {
@@ -190,7 +193,7 @@ resource "terraform_data" "bootstrap" {
   provisioner "file" {
     content     = <<-EOT
       export TS_AUTHKEY="$(printf %s '${base64encode(tailscale_tailnet_key.loady_vm.key)}' | base64 -d)"
-      export LD_SECRET_SSH_GIT_BASE64="$(printf %s '${base64encode(coalesce(var.loady_ssh_git_base64, " "))}' | base64 -d)"
+      export LD_SECRET_SSH_GIT_BASE64="$(printf %s '${base64encode(var.loady_ssh_git_base64)}' | base64 -d)"
     EOT
     destination = "/home/dev/.cache/loady-bootstrap/environment"
   }

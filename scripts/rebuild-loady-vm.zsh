@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Destroy and recreate the development VM. Run from the Mac; this is `ld-tfd`.
+# Create or rebuild the development VM. Run from the Mac; this is `ld-tfd`.
 #
 # The VM is disposable, but its working tree is not: under AGENTS.md rule 2 nothing commits
 # automatically, so uncommitted and unpushed work is the normal state on that machine and the disk
@@ -8,11 +8,11 @@
 set -euo pipefail
 
 repo_root="${0:A:h:h}"
-root="$repo_root/infra/loady-vm"
+root="$repo_root/infra"
 host="${LD_VM_HOST:-loady-vm}"
 
 if (( $# > 1 )) || [[ $# -eq 1 && "$1" != --force ]]; then
-  print -ru2 -- "usage: ld-tfd [--force]   # destroy and recreate the development VM"
+  print -ru2 -- "usage: ld-tfd [--force]   # create or rebuild the development VM"
   exit 2
 fi
 
@@ -52,11 +52,28 @@ terraform destroy -auto-approve
 # The replacement answers on the same name and address with new host keys; drop the old ones before
 # Terraform's post step connects to it.
 ipv4="$(sed -nE 's/^ *default *= *"([0-9.]+)\/[0-9]+"/\1/p' variables.tf | head -n 1)"
+tailscale_host="$(ssh -G loady-vm-ts 2>/dev/null | awk '$1 == "hostname" { print $2; exit }')"
 ssh-keygen -R "$host" >/dev/null 2>&1 || true
 [[ -z "$ipv4" ]] || ssh-keygen -R "$ipv4" >/dev/null 2>&1 || true
+[[ -z "$tailscale_host" ]] || ssh-keygen -R "$tailscale_host" >/dev/null 2>&1 || true
 
 print -- "==> Creating $host"
 terraform apply -auto-approve
 
+print -- "==> Waiting for $host to finish rebooting"
+vm_ready=false
+for _ in {1..36}; do
+  if ssh -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=accept-new \
+    "$host" 'test ! -f /var/run/reboot-required' 2>/dev/null; then
+    vm_ready=true
+    break
+  fi
+  sleep 5
+done
+if [[ "$vm_ready" != true ]]; then
+  print -ru2 -- "ld-tfd: $host did not become ready within 180s; inspect the Proxmox console"
+  exit 1
+fi
+
 print
-print -- "Rebuilt $host. Continue at the account steps in infra/loady-vm/README.md."
+print -- "$host is fully bootstrapped and ready. Continue at the account steps in infra/README.md."

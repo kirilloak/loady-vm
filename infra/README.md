@@ -35,6 +35,10 @@ Nothing else is codename-gated: PowerShell is not installed at all, `sqlcmd` com
 release, and the Functions Core Tools come from npm — all three deliberately, because the
 `packages.microsoft.com/.../prod` repository lags new Ubuntu releases badly.
 
+If that filename already exists in Proxmox but is absent from this root's state, the first apply
+replaces that one unmanaged file from the configured URL and takes ownership of it. This makes a
+retry converge after a download that completed remotely but failed before Terraform recorded it.
+
 ## Install, in order
 
 1. **The one key, and the Bitwarden item.** `docs/manual-secrets.md`: a passphrase-less copy of the
@@ -98,18 +102,18 @@ release, and the Functions Core Tools come from npm — all three deliberately, 
    and remove the four old `ld-*` aliases if they are still there — they point at a path that no
    longer exists.
 
-5. **Create it, from the Mac**, in this directory:
+5. **Create it, from the Mac**, with one command from any directory:
 
    ```bash
-   ld-tfin
-   terraform plan
-   terraform apply
+   ld-tfd
    ```
 
-   The apply creates the VM, waits for SSH, runs the bootstrap with the Tailscale key and the two
-   SSH keys, ends with a version table, and reboots the VM seconds later when Ubuntu requires it.
-   If the post step fails, fix the cause and apply again — the bootstrap converges, so a rerun is
-   safe.
+   `ld-tfd` loads the Bitwarden register, initializes Terraform, removes any partial prior machine,
+   clears its stale SSH host keys, applies with auto-approval, waits for SSH, joins the VM to
+   Tailscale, runs the bootstrap with the Git key, restores and builds the C# solution, installs
+   frontend dependencies, pulls every Compose image, and waits for any required Ubuntu reboot to
+   finish. Any step failing stops the command; fix the cause and run `ld-tfd` again. It refuses to
+   destroy reachable uncommitted or unpushed work unless `--force` is explicit.
 
 6. **Reserve the address** on the router, outside the DHCP pool.
 

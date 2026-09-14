@@ -11,14 +11,14 @@ agents/          the Loady agent instruction files, symlinked into the checkout
 compose/         local services and the function-host manifest
 docs/            architecture, Rider, ports, boundaries, secrets
 dotfiles/        agent and Rider configuration on the VM, with its own sync
-infra/loady-vm/  Terraform for the VM, plus the bootstrap that builds its inside
+infra/           Terraform for the VM, plus the bootstrap that builds its inside
 plans/           plans and their result ledgers
 scripts/         the ld-* commands
 ```
 
 ## Start here
 
-- Building the machine for the first time: `infra/loady-vm/README.md`.
+- Building the machine for the first time: `infra/README.md`.
 - How it all fits together, and how to connect Rider: `docs/remote-development.md`.
 - The rules every agent working in this repository follows: `AGENTS.md`.
 
@@ -35,7 +35,8 @@ scripts/         the ld-* commands
 | `ld-vm <cmd>` | run a command on the VM, from the checkout |
 | `ld-vm-setup` | converge the VM (rerun the bootstrap) |
 | `ld-up [--takeover]`, `ld-down` | power the VM on and off |
-| `ld-tfin`, `ld-tfd` | load secrets and `terraform init`; destroy and recreate |
+| `ld-tfin` | load Terraform secrets and initialize the current root |
+| `ld-tfd [--force]` | create or rebuild the VM end to end, including bootstrap and warm-up |
 | `ld-start [--public]`, `ld-stop`, `ld-status`, `ld-logs` | the function hosts and containers |
 | `ld-reset [--hard]` | recreate the containers from scratch |
 | `ld-build`, `ld-seed`, `ld-fe` | build, seed, frontend dev server |

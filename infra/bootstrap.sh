@@ -331,12 +331,13 @@ fi
 # rotated loady-vm key is then `tailscale ssh dev@loady-vm` and a new authorized_keys, not a rebuild.
 # --------------------------------------------------------------------------------------------------
 log "tailscale"
-tailscale_todo=""
 sudo systemctl enable --now tailscaled >/dev/null
 if [[ "$(tailscale status --json 2>/dev/null | jq -r .BackendState)" == "Running" ]]; then
   sudo tailscale set --ssh
-elif [[ -z "${TS_AUTHKEY:-}" ]] || ! sudo tailscale up --auth-key="$TS_AUTHKEY" --hostname="$(hostname)" --ssh; then
-  tailscale_todo="  - sudo tailscale up --ssh   # not on the tailnet (no key, or the key was already spent)"
+else
+  [[ -n "${TS_AUTHKEY:-}" ]] || die "the VM is not on the tailnet and no Tailscale auth key was provided"
+  sudo tailscale up --auth-key="$TS_AUTHKEY" --hostname="$(hostname)" --ssh \
+    || die "could not join the tailnet"
 fi
 
 # --------------------------------------------------------------------------------------------------
@@ -365,7 +366,7 @@ fi
 for rc in "$HOME/.zprofile" "$HOME/.zshrc"; do
   if ! grep -qsF 'loady-shell.zsh' "$rc"; then
     cat >>"$rc" <<'EOF'
-# Loady workstation commands (infra/loady-vm/bootstrap.sh)
+# Loady workstation commands (infra/bootstrap.sh)
 [ -f /etc/profile.d/loady-dev.sh ] && . /etc/profile.d/loady-dev.sh
 [ -f "$HOME/loady-vm/scripts/loady-shell.zsh" ] && source "$HOME/loady-vm/scripts/loady-shell.zsh"
 alias claude-ask='command claude'
@@ -382,7 +383,7 @@ done
 # mistake. Plain zsh, so there is no framework to install or update.
 if ! grep -qsF 'loady-prompt' "$HOME/.zshrc"; then
   cat >>"$HOME/.zshrc" <<'EOF'
-# loady-prompt (infra/loady-vm/bootstrap.sh)
+# loady-prompt (infra/bootstrap.sh)
 autoload -Uz compinit vcs_info && compinit
 HISTFILE=~/.zsh_history HISTSIZE=50000 SAVEHIST=50000
 setopt share_history hist_ignore_dups hist_ignore_space prompt_subst
@@ -396,8 +397,8 @@ fi
 mkdir -p "$WORKTREES"
 
 # --------------------------------------------------------------------------------------------------
-# SSH keys and git identity. Two remotes, two keys: GitHub for this repository, Azure DevOps for
-# loady-one. Each checkout is bound to its key with core.sshCommand, so nothing depends on an agent
+# SSH keys and git identity. One key reaches both GitHub for this repository and Azure DevOps for
+# loady-one. Each checkout is bound to it with core.sshCommand, so nothing depends on an agent
 # forwarded from the Mac and every headless session — Rider's backend, tmux, cron — pushes the same.
 # --------------------------------------------------------------------------------------------------
 log "ssh keys"
@@ -470,20 +471,14 @@ git config --global pull.rebase false
 
 clone_checkout() {
   # clone_checkout <url> <path> <ssh command>: clone when missing, and always bind the checkout to
-  # its own key. A path that exists but is not a checkout is reported, never replaced.
+  # its own key. A path that exists but is not a checkout fails without replacing it.
   local url="$1" path="$2" ssh_command="$3"
   if [[ -e "$path" && ! -e "$path/.git" ]]; then
-    git_todo="$git_todo
-  - $path exists but is not a Git checkout; left untouched"
-    return 0
+    die "$path exists but is not a Git checkout; left untouched"
   fi
   if [[ ! -e "$path/.git" ]]; then
     run_with_progress "clone $(basename "$path")" env GIT_SSH_COMMAND="$ssh_command" \
-      git clone -q "$url" "$path" || {
-      git_todo="$git_todo
-  - could not clone $url; check the key and rerun"
-      return 0
-    }
+      git clone -q "$url" "$path"
   fi
   git -C "$path" remote set-url origin "$url"
   git -C "$path" config core.sshCommand "$ssh_command"
@@ -491,15 +486,11 @@ clone_checkout() {
 
 log "checkouts"
 if [[ ! -f "$git_key" ]]; then
-  git_todo="$git_todo
-  - no git key in the register, so neither repository could be cloned and no ld-* command exists
-    here. Run 'ld-tfin' in infra/loady-vm on the Mac and rerun (docs/manual-secrets.md)"
+  die "no git key in the register; run 'ld-tfin' in infra on the Mac and rerun (docs/manual-secrets.md)"
 elif ! ssh-keygen -y -P "" -f "$git_key" >/dev/null 2>&1; then
   # A passphrase here would make every headless push prompt forever; the register is supposed to
   # hold the passphrase-less copy, so say so plainly rather than hang later.
-  git_todo="$git_todo
-  - the git key is passphrase-protected; headless git would prompt. Replace the register field with
-    a passphrase-less copy (docs/manual-secrets.md) and rerun"
+  die "the git key is passphrase-protected; replace the register field with a passphrase-less copy (docs/manual-secrets.md)"
 else
   clone_checkout "$VM_REPO_URL" "$VM_REPO" "$git_ssh_command"
   clone_checkout "$LOADY_REPO_URL" "$REPO" "$git_ssh_command"
@@ -519,9 +510,11 @@ fi
 # --------------------------------------------------------------------------------------------------
 if [[ -d "$VM_REPO/.git" ]]; then
   log "agent files and dotfiles"
-  [[ ! -x "$VM_REPO/scripts/link-agent-files.sh" ]] || "$VM_REPO/scripts/link-agent-files.sh" "$REPO" || true
+  [[ -x "$VM_REPO/scripts/link-agent-files.sh" ]] \
+    || die "$VM_REPO/scripts/link-agent-files.sh is missing or not executable"
+  "$VM_REPO/scripts/link-agent-files.sh" "$REPO"
   if [[ -x "$VM_REPO/dotfiles/sync.sh" ]]; then
-    "$VM_REPO/dotfiles/sync.sh" install || true
+    "$VM_REPO/dotfiles/sync.sh" install
     "$VM_REPO/dotfiles/sync.sh" || git_todo="$git_todo
   - dotfiles sync conflict; see $VM_REPO/dotfiles/README.md"
   fi
@@ -533,24 +526,18 @@ if [[ -d "$REPO/.git" ]]; then
   fi
 
   log "warming the build cache"
-  run_with_progress "dotnet restore" dotnet restore "$REPO/backend/Loady.slnx" --nologo --verbosity quiet \
-    || git_todo="$git_todo
-  - dotnet restore failed; run 'ld-build' by hand to see why"
-  run_with_progress "dotnet build" dotnet build "$REPO/backend/Loady.slnx" --no-restore --nologo --verbosity quiet \
-    || git_todo="$git_todo
-  - dotnet build failed; run 'ld-build' by hand to see why"
-  run_with_progress "yarn install" yarn --cwd "$REPO/frontend" install --frozen-lockfile \
-    || git_todo="$git_todo
-  - yarn install failed; run it by hand in frontend/"
+  run_with_progress "dotnet restore" dotnet restore "$REPO/backend/Loady.slnx" --nologo --verbosity quiet
+  run_with_progress "dotnet build" dotnet build "$REPO/backend/Loady.slnx" --no-restore --nologo --verbosity quiet
+  run_with_progress "yarn install" yarn --cwd "$REPO/frontend" install --frozen-lockfile
 
   # The container images, so the first ld-start is not a download. The docker group joined above is
   # not in this session's groups until the next login, hence sudo when it is missing.
   docker_cmd=(docker)
   id -nG | tr ' ' '\n' | grep -qx docker || docker_cmd=(sudo docker)
   run_with_progress "container images" env LOADY_REPO_DIR="$REPO" "${docker_cmd[@]}" compose \
-    --project-directory "$VM_REPO/compose" -f "$VM_REPO/compose/loady-vm.yaml" pull --quiet \
-    || git_todo="$git_todo
-  - could not pull the container images; 'ld-reset' will fetch them"
+    --project-directory "$VM_REPO/compose" -f "$VM_REPO/compose/loady-vm.yaml" pull --quiet
+else
+  die "$REPO was not cloned"
 fi
 
 # --------------------------------------------------------------------------------------------------
@@ -715,10 +702,9 @@ if [[ -f /var/run/reboot-required ]]; then
   echo "Ubuntu requires a reboot: rebooting in 15 seconds."
   sudo systemd-run --quiet --on-active=15 systemctl reboot
 fi
-[[ -z "$tailscale_todo" ]] || echo "$tailscale_todo"
 [[ -z "$git_todo" ]] || echo "$git_todo"
 if [[ ! -d "$REPO/.git" ]]; then
-  echo "Done. The checkout is not there yet — infra/loady-vm/README.md, Install, from the key steps."
+  die "the checkout is missing after bootstrap"
 else
   echo "Done in $((SECONDS - bootstrap_started))s: the VM matches this script."
 fi

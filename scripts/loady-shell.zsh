@@ -23,6 +23,14 @@ ld_run() {
   "$LOADY_VM_REPO/$script" "$@"
 }
 
+ld_run_with_bw_session() {
+  command -v bw >/dev/null || { print -ru2 -- "Bitwarden CLI (bw) is not installed"; return 1 }
+  command -v jq >/dev/null || { print -ru2 -- "jq is not installed"; return 1 }
+  [[ -z "${BW_SESSION:-}" ]] || export BW_SESSION
+  ld_bitwarden_session || return 1
+  ld_run "$@"
+}
+
 # ---------------------------------------------------------------------------------------------
 # The VM, from the Mac
 # ---------------------------------------------------------------------------------------------
@@ -32,7 +40,7 @@ ld_run() {
 # LC_ALL: ssh forwards the Mac's LC_CTYPE=UTF-8, which the VM does not have, and every perl-based
 # apt step there warns about it.
 ld-vm()       { ssh -t "${LD_VM_HOST:-loady-vm}" -- "export LC_ALL=C.UTF-8; cd ~/loady-one && zsh -lic ${(q)*}"; }
-ld-vm-setup() { ld_run infra/loady-vm/setup.sh "$@"; }
+ld-vm-setup() { ld_run infra/setup.sh "$@"; }
 # The two workstation VMs on the Proxmox host, switched by name: starting one stops the other,
 # because only one may run at a time. `vm-start loady`, `vm-stop dev`, `vm-status`.
 vm-start()    { ld_run scripts/vm.sh start "$@"; }
@@ -41,7 +49,7 @@ vm-status()   { ld_run scripts/vm.sh status "$@"; }
 # ld-up and ld-down name this VM without repeating which one it is.
 ld-up()       { ld_run scripts/vm.sh start loady "$@"; }
 ld-down()     { ld_run scripts/vm.sh stop loady; }
-ld-tfd()      { ld_run scripts/rebuild-loady-vm.zsh "$@"; }
+ld-tfd()      { ld_run_with_bw_session scripts/rebuild-loady-vm.zsh "$@"; }
 
 # ---------------------------------------------------------------------------------------------
 # The stack, on the VM
@@ -119,7 +127,7 @@ ld-tfin() {
   (( ${#stale} )) && unset "${stale[@]}"
 
   if [[ ! -f .tf-vars ]]; then
-    print -ru2 -- "ld-tfin: no .tf-vars here; run it in infra/loady-vm"
+    print -ru2 -- "ld-tfin: no .tf-vars here; run it in infra"
     return 1
   fi
 

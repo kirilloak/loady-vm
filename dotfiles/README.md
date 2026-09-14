@@ -25,7 +25,7 @@ repository; a second sync managing the same live file would conflict on every ed
 would be whichever ran last. The VM has no other manager, which is what makes it safe here.
 
 The trigger is one crontab line every two minutes, installed by `sync.sh install` and logged to
-journald (`journalctl -t loady-dotfiles`). `infra/loady-vm/bootstrap.sh` runs `install` and a first
+journald (`journalctl -t loady-dotfiles`). `infra/bootstrap.sh` runs `install` and a first
 sync on every converge, so a rebuilt VM has these files as soon as its checkout exists.
 
 ## How the sync works

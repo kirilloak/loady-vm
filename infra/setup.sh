@@ -12,7 +12,7 @@
 # Run it from this root after `ld-tfin`, which exports the register as TF_VAR_loady_ssh_git_base64; run it
 # from anywhere without, and the bootstrap converges everything except the keys.
 #
-# Usage: infra/loady-vm/setup.sh [ssh-host]      default: loady-vm
+# Usage: infra/setup.sh [ssh-host]      default: loady-vm
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

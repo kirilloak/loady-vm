@@ -43,7 +43,7 @@ Everything below was created by this task unless marked.
 - `scripts/vm.sh` — `vm-start`/`vm-stop`/`vm-status`, switching between the two workstation VMs
 - `scripts/rebuild-loady-vm.zsh` — `ld-tfd`
 
-**Terraform** (`infra/loady-vm/`)
+**Terraform** (`infra/`)
 - `versions.tf`, `provider.tf`, `variables.tf`, `main.tf`, `outputs.tf`
 - `.tf-vars` — all three items live: the shared Proxmox and Tailscale ones, and `workstation/loady`
   (`06e7a977-9e1f-4641-8e36-b4c50096047a`) for the single git key
@@ -82,15 +82,15 @@ In order. Steps 14-19 of the plan.
    *Verify:* the copy authenticates with no prompt to **both** `git@ssh.dev.azure.com` and
    `git@github.com`.
 
-3. **`/etc/hosts` and `~/.ssh/config`** on the Mac — `infra/loady-vm/README.md` step 2. Reserve
+3. **`/etc/hosts` and `~/.ssh/config`** on the Mac — `infra/README.md` step 2. Reserve
    `192.168.1.51` on the router, outside the DHCP pool.
 
 4. **Source the shell file** from `~/.zprofile` and `~/.zshrc`, and delete the four dead `ld-*`
    aliases in `~/.zshrc` (lines 81-84: they point at `~/Repositories/loady/loady-one`, which no
    longer exists).
 
-5. **Confirm `192.168.1.51` and `vm_id` 201 are free** on the live host, then from
-   `infra/loady-vm`: `ld-tfin`, `terraform plan`, `terraform apply`.
+5. **Confirm `192.168.1.51` and `vm_id` 201 are free** on the live host, then run `ld-tfd` from any
+   directory. It loads the register, initializes Terraform, and creates the fully bootstrapped VM.
 
 6. **Sign in on the VM**: `ld-vm bw login`, `ld-vm 'az login'`, `ld-vm claude`, `ld-vm codex`.
 
@@ -108,6 +108,12 @@ In order. Steps 14-19 of the plan.
 
 ## Notes
 
+- **Follow-up on 2026-09-14:** the Terraform root moved from `infra/loady-vm/` to `infra/`, keeping
+  its local state and initialized providers. An apply now replaces a colliding unmanaged Proxmox
+  image, requires the Git key, and fails unless the C# restore/build, frontend install, and Compose
+  image pull all succeed. Following Costfluent's `cf-tfd` pattern, `ld-tfd` opens the Bitwarden
+  session before entering the rebuild script, clears LAN and Tailscale host keys, and waits for the
+  post-bootstrap reboot to finish, so creation and rebuilding require only that command.
 - **Three keys became one, on request.** The plan had a dedicated Mac→VM ed25519, the Azure DevOps
   RSA key, and a new GitHub ed25519. The founder asked to reuse existing keys rather than create any.
   Verified on 2026-09-14 that `~/.ssh/loady/id_rsa` already authenticates to **both**

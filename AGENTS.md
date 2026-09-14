@@ -36,7 +36,7 @@ Every decision in this repository follows from these. They are not preferences.
    Azure DevOps web UI or `az repos` automation either — pull requests are the founder's, by hand.
 
 4. **The Mac is a client, plus a cold fallback.** Daily work happens on the VM. The Mac runs the
-   Rider client, a browser, `ssh`, and the Terraform root in `infra/loady-vm`. Its `~/loady-one`
+   Rider client, a browser, `ssh`, and the Terraform root in `infra`. Its `~/loady-one`
    checkout exists only for when the Proxmox host is down; nothing synchronises the two, and a
    fallback session starts with a fetch and ends with a push.
 
@@ -51,9 +51,9 @@ One fact, one file. Two files stating the same thing will disagree eventually.
 
 | Knowledge | Owner |
 |---|---|
-| The VM: sizing, address, image, lifecycle | `infra/loady-vm/*.tf` and `infra/loady-vm/README.md` |
-| What is installed and configured inside the VM | `infra/loady-vm/bootstrap.sh` |
-| Converging the VM from the Mac | `infra/loady-vm/setup.sh` |
+| The VM: sizing, address, image, lifecycle | `infra/*.tf` and `infra/README.md` |
+| What is installed and configured inside the VM | `infra/bootstrap.sh` |
+| Converging the VM from the Mac | `infra/setup.sh` |
 | Architecture, Rider, ports, boundaries, streams | `docs/remote-development.md` |
 | The Bitwarden register and recovery | `docs/manual-secrets.md` |
 | The `ld-*` command surface | `scripts/loady-shell.zsh` |

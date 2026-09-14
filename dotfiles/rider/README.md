@@ -8,7 +8,7 @@ machine.
 ## Rider in SSH (remote development) mode
 
 - **Tools > SSH Agent Forwarding > Enable SSH agent forwarding — off.** The VM has its own key to
-  Azure DevOps, placed by `infra/loady-vm/bootstrap.sh` and bound to the checkout with
+  Azure DevOps, placed by `infra/bootstrap.sh` and bound to the checkout with
   `core.sshCommand`. Forwarding the Mac's agent would make pushes work for the wrong reason: they
   would then depend on an interactive Mac session, and break in tmux, cron and every headless
   backend.

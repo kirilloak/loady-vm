@@ -107,12 +107,16 @@ variable "tailscale_tailnet" {
 
 # The one key the VM needs to reach a git remote, as single-line base64 of the private key file.
 # ld-tfin loads it from Bitwarden through .tf-vars and the bootstrap writes it onto the VM, so a
-# rebuilt machine clones both repositories without a file being copied by hand. Optional: an absent
-# one is reported by the bootstrap, not invented.
+# rebuilt machine clones both repositories without a file being copied by hand. It is required
+# because a successful apply promises a cloned, built and warmed development workstation.
 
 variable "loady_ssh_git_base64" {
   description = "The founder's existing Loady key (~/.ssh/loady/id_rsa on the Mac) with its passphrase removed. One key for every git remote this machine uses: it is already registered on both Azure DevOps and GitHub. RSA because Azure DevOps accepts nothing else; passphrase-less because a headless Rider backend and an agent shell cannot answer a prompt"
   type        = string
   sensitive   = true
-  default     = null
+
+  validation {
+    condition     = trimspace(var.loady_ssh_git_base64) != ""
+    error_message = "loady_ssh_git_base64 must contain the base64-encoded Git private key."
+  }
 }

@@ -45,11 +45,11 @@ proxmox_password() {
     return 0
   fi
   command -v bw >/dev/null || ld_die "no Proxmox password in the environment and no Bitwarden CLI.
-       Run 'ld-tfin' in infra/loady-vm, or set LD_PROXMOX_PASSWORD."
+       Run 'ld-tfin' in infra, or set LD_PROXMOX_PASSWORD."
   local item
   item="$(awk '$1 == "TF_VAR_virtual_environment_password" { print $2 }' \
-    "$(ld_vm_repo)/infra/loady-vm/.tf-vars")"
-  [[ -n "$item" ]] || ld_die "could not find the Proxmox item id in infra/loady-vm/.tf-vars"
+    "$(ld_vm_repo)/infra/.tf-vars")"
+  [[ -n "$item" ]] || ld_die "could not find the Proxmox item id in infra/.tf-vars"
   bw get item "$item" 2>/dev/null | jq -er '.login.password' 2>/dev/null || ld_die \
     "Bitwarden is locked. Unlock it first:
            export BW_SESSION=\"\$(bw unlock --raw)\""
