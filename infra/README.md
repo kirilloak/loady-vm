@@ -41,11 +41,11 @@ retry converge after a download that completed remotely but failed before Terraf
 
 ## Install, in order
 
-1. **The one key, and the Bitwarden item.** `docs/manual-secrets.md`: a passphrase-less copy of the
-   existing `~/.ssh/loady/id_rsa`, stored as `ssh_loady_git_base64` on the `workstation/loady` item
-   that `.tf-vars` already names. No new keys are created and no profile changes: that key already
-   reaches Azure DevOps, the only git service the VM talks to, and the Mac logs in to the VM with
-   its existing `~/.ssh/id_ed25519`.
+1. **The keys, and the Bitwarden items.** `docs/manual-secrets.md`: a passphrase-less copy of the
+   existing `~/.ssh/loady/id_rsa` as `ssh_loady_git_base64` on `workstation/loady`, for Azure
+   DevOps; `ssh_dev_vm_github_base64` and `pat` on the items `.tf-vars` already names, for GitHub.
+   No new keys are created and no profile changes: both keys are already registered where they are
+   used, and the Mac logs in to the VM with its existing `~/.ssh/id_ed25519`.
 
 2. **The name, on the Mac.** `loady-vm` is the LAN address permanently, in `/etc/hosts`. The VM is
    reachable on the LAN only.
@@ -105,10 +105,10 @@ retry converge after a download that completed remotely but failed before Terraf
    ```
 
    `ld-tfd` loads the Bitwarden register, initializes Terraform, applies with auto-approval, waits
-   for SSH, sends this repository to the VM, runs the bootstrap with the Git key, restores and
-   builds the C# solution, installs frontend dependencies, pulls every Compose image, and waits for
-   any required Ubuntu reboot to finish. Any step failing stops the command; fix the cause and run
-   it again.
+   for SSH, runs the bootstrap with the two Git keys, which clones both `loady-one` and this
+   repository, restores and builds the C# solution, installs frontend dependencies, pulls every
+   Compose image, and waits for any required Ubuntu reboot to finish. Any step failing stops the
+   command; fix the cause and run it again.
 
    With a VM already there it converges that one rather than replacing it, which is also how an
    upgrade is run. `ld-tfd --rebuild` destroys it first and builds it again from the cloud image,
@@ -142,11 +142,13 @@ retry converge after a download that completed remotely but failed before Terraf
   other.
 - **Converge or upgrade**: `ld-tfd`, which loads the register itself, or `ld-tfin && ld-vm-setup`
   to converge without Terraform (`ld-tfin` is what carries the keys into the shell; without it the
-  run stops at the clone). Every run upgrades packages within the configured Ubuntu release,
+  run stops at the clones). Every run upgrades packages within the configured Ubuntu release,
   Docker, the SDKs, the CLIs and the agents, rewrites only what differs, and reboots seconds later
   when Ubuntu requires it.
 - **Rotate a key**: update the field in Bitwarden, then `ld-tfin && ld-vm-setup`.
-- **Change what the VM has**: edit `bootstrap.sh`, then either command above.
+- **Change what the VM has**: edit `bootstrap.sh`, then either command above. The VM's own
+  `~/loady-vm` is a checkout of this repository, so that edit can be made and committed there;
+  the Mac pulls it before the next Terraform run.
 
 Each bootstrap runs on the VM as the systemd unit `loady-bootstrap`, started by `run-bootstrap.sh`,
 and the caller holds nothing but its log. The run therefore survives the connection that started it:
@@ -177,7 +179,7 @@ ld-tfd --rebuild            # destroy and build again; refuses while the VM hold
 ld-tfd --rebuild --force    # discards it
 ```
 
-`scripts/rebuild-loady-vm.zsh` checks the checkout and every worktree, runs `ld-tfin`, destroys,
+`scripts/rebuild-loady-vm.zsh` checks both checkouts and every worktree, runs `ld-tfin`, destroys,
 drops the destroyed machine's host keys from `~/.ssh/known_hosts` so Terraform can connect to its
 replacement, then applies. The refusal matters more here than it would elsewhere: nothing on this
 machine commits automatically, so a dirty tree is the normal state and the disk is its only copy.

@@ -7,6 +7,14 @@
 # dev-infra/dev-proxmox — root@pam on the Proxmox API
 TF_VAR_virtual_environment_password 96ed5a9b-7d25-4889-a8f2-b3900126fed1
 
-# workstation/loady — the founder's existing Loady key, passphrase removed, for every git remote
-# the VM uses. See docs/manual-secrets.md.
+# workstation/loady — the founder's existing Loady key, passphrase removed, for the VM's Azure
+# DevOps remote. See docs/manual-secrets.md.
 TF_VAR_loady_ssh_git_base64 06e7a977-9e1f-4641-8e36-b4c50096047a field ssh_loady_git_base64
+
+# workstation/keys — dev-vm-github, a passphrase-less user key on the founder's GitHub account,
+# shared with the costfluent dev VM. The VM's ~/loady-vm checkout pushes with it.
+TF_VAR_github_ssh_base64 59967647-9d93-4e60-917f-b4bf015de599 field ssh_dev_vm_github_base64
+
+# prod-infra/prod-github — the founder's PAT, shared with the costfluent dev VM. Read-only API use
+# on this machine: pinning GitHub's SSH host keys, and GH_TOKEN for agents.
+TF_VAR_github_token 72c148f2-f62c-491f-97ca-b39a0171e3e3 field pat

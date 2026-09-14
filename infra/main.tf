@@ -10,7 +10,6 @@ locals {
   ipv4_address   = split("/", var.ipv4_cidr)[0]
   bootstrap_path = "${path.module}/bootstrap.sh"
   runner_path    = "${path.module}/run-bootstrap.sh"
-  send_tree_path = "${path.module}/send-tree.sh"
 }
 
 resource "proxmox_download_file" "ubuntu_cloud_image" {
@@ -137,13 +136,6 @@ resource "terraform_data" "bootstrap" {
     inline = ["install -d -m 700 /home/dev/.cache/loady-bootstrap"]
   }
 
-  # The VM reads this repository but does not clone it: it is the Mac's, and the VM reaches Azure
-  # DevOps only (AGENTS.md rule 3). This runs on the Mac, over the same key as the connection above.
-  provisioner "local-exec" {
-    command     = "${local.send_tree_path} dev@${local.ipv4_address}"
-    interpreter = ["/bin/bash", "-c"]
-  }
-
   provisioner "file" {
     source      = local.bootstrap_path
     destination = "/home/dev/.cache/loady-bootstrap/bootstrap.sh"
@@ -162,6 +154,8 @@ resource "terraform_data" "bootstrap" {
   provisioner "file" {
     content     = <<-EOT
       export LD_SECRET_SSH_GIT_BASE64="$(printf %s '${base64encode(var.loady_ssh_git_base64)}' | base64 -d)"
+      export LD_SECRET_SSH_GITHUB_BASE64="$(printf %s '${base64encode(var.github_ssh_base64)}' | base64 -d)"
+      export LD_SECRET_GITHUB_TOKEN="$(printf %s '${base64encode(coalesce(var.github_token, " "))}' | base64 -d)"
     EOT
     destination = "/home/dev/.cache/loady-bootstrap/environment"
   }

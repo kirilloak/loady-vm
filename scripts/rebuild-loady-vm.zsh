@@ -1,15 +1,14 @@
 #!/usr/bin/env zsh
 # Converge or rebuild the development VM. Run from the Mac; this is `ld-tfd`.
 #
-# Converges the VM when one is already there: sends this repository across and runs the bootstrap,
-# which upgrades the packages, the SDKs, the CLIs and the agents and rewrites whatever differs.
-# `--rebuild` destroys it first and builds it again from the cloud image.
+# Converges the VM when one is already there: runs the bootstrap, which upgrades the packages, the
+# SDKs, the CLIs and the agents and rewrites whatever differs. `--rebuild` destroys it first and
+# builds it again from the cloud image.
 #
-# The VM is disposable, but its working tree is not: under AGENTS.md rule 2 nothing commits
+# The VM is disposable, but its working trees are not: under AGENTS.md rule 2 nothing commits
 # automatically, so uncommitted and unpushed work is the normal state on that machine and the disk
-# is the only copy of it. A rebuild refuses while any exists, in the loady-one checkout and in every
-# worktree, and --force is the only way past. ~/loady-vm there is a copy the Mac sends, not a
-# checkout, so there is nothing to lose in it.
+# is the only copy of it. A rebuild refuses while any exists — in loady-one, in ~/loady-vm, which is
+# this repository's own checkout there, and in every worktree — and --force is the only way past.
 set -euo pipefail
 
 repo_root="${0:A:h:h}"
@@ -36,10 +35,13 @@ if [[ "$rebuild" == true && "$force" != true ]] \
   # Written for bash: the VM's login shell is zsh, which aborts on an unmatched glob, and an empty
   # worktrees directory is exactly that.
   check='
-    cd ~/loady-one 2>/dev/null || exit 0
-    git status --porcelain | sed "s|^|loady-one: |"
-    git fetch -q origin 2>/dev/null || true
-    git log --oneline --branches --not --remotes 2>/dev/null | sed "s|^|loady-one unpushed: |"
+    for r in ~/loady-one ~/loady-vm; do
+      [ -d "$r/.git" ] || continue
+      n="$(basename "$r")"
+      git -C "$r" status --porcelain | sed "s|^|$n: |"
+      git -C "$r" fetch -q origin 2>/dev/null || true
+      git -C "$r" log --oneline --branches --not --remotes 2>/dev/null | sed "s|^|$n unpushed: |"
+    done
     for w in ~/loady-worktrees/*/ ~/loady-worktrees/*/*/; do
       [ -d "$w/.git" ] || [ -f "$w/.git" ] || continue
       git -C "$w" status --porcelain | sed "s|^|$(basename "$w"): |"

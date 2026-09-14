@@ -23,10 +23,14 @@ REPO="$HOME/loady-one"
 VM_REPO="$HOME/loady-vm"
 WORKTREES="$HOME/loady-worktrees"
 GIT_USER_NAME="Kirill Starodubtsev"
-# One address on this machine, in every checkout.
+# The global address, which is loady-one's: Loady work is committed as Loady.
 GIT_EMAIL="kirill.starodubtsev@loady.com"
+# This repository is the founder's own, on his own GitHub account, so its checkout commits under
+# his own address rather than the company's. Set on that checkout only, never globally.
+GITHUB_EMAIL="79607671+kirilloak@users.noreply.github.com"
 
 LOADY_REPO_URL="git@ssh.dev.azure.com:v3/Loady-Logistics/loady/loady-one"
+VM_REPO_URL="git@github.com:kirilloak/loady-vm.git"
 
 # Azure DevOps publishes one RSA host key for ssh.dev.azure.com. Pinning by fingerprint rather than
 # trusting whatever ssh-keyscan returns is the difference between a known host and a hope.
@@ -361,6 +365,13 @@ export loady_relational_database_connection='Server=localhost,1433;Database=load
 # exist yet makes every node process warn on startup.
 [ -f /usr/local/share/loady/cosmos-emulator.pem ] \
   && export NODE_EXTRA_CA_CERTS=/usr/local/share/loady/cosmos-emulator.pem
+# The founder's GitHub PAT, for read-only API work from agents and scripts. It is read from the
+# 0600 file the bootstrap writes rather than written here, because this file is world-readable.
+if [ -r \"\$HOME/.config/loady/github-token\" ]; then
+  GH_TOKEN=\"\$(cat \"\$HOME/.config/loady/github-token\")\"
+  export GH_TOKEN
+  export GITHUB_TOKEN=\"\$GH_TOKEN\"
+fi
 export PATH=\$HOME/.local/bin:\$HOME/.dotnet/tools:\$DOTNET_ROOT:\$PATH"
 if [[ "$(cat "$profile" 2>/dev/null || true)" != "$profile_content" ]]; then
   echo "$profile_content" | sudo tee "$profile" >/dev/null
@@ -400,9 +411,10 @@ fi
 mkdir -p "$WORKTREES"
 
 # --------------------------------------------------------------------------------------------------
-# SSH keys and git identity. One key, one remote: Azure DevOps for loady-one, the only checkout on
-# this machine. It is bound to the key with core.sshCommand, so nothing depends on an agent
-# forwarded from the Mac and every headless session — Rider's backend, tmux, cron — pushes the same.
+# SSH keys and git identity. Two remotes, one key each: Azure DevOps for loady-one, GitHub for
+# loady-vm. Each checkout is bound to its own key with core.sshCommand, so nothing depends on an
+# agent forwarded from the Mac, nothing depends on which key ssh would have offered first, and every
+# headless session — Rider's backend, tmux, cron — pushes the same.
 # --------------------------------------------------------------------------------------------------
 log "ssh keys"
 git_todo=""
@@ -424,13 +436,37 @@ place_secret() {
   chmod 600 "$dest"
 }
 
-# One key for every git remote this machine talks to. It is the founder's existing Loady key, which
-# is already registered on Azure DevOps, the only git service this machine reaches, so nothing new
-# changes. IdentitiesOnly matters more than it looks: Azure DevOps accepts the first key offered and
-# may reject the request outright rather than trying the next one.
+# The founder's existing Loady key, registered on Azure DevOps. IdentitiesOnly matters more than it
+# looks: Azure DevOps accepts the first key offered and may reject the request outright rather than
+# trying the next one — and this machine now holds a second key it must not offer there.
 git_key="$HOME/.ssh/loady/id_rsa"
 place_secret LD_SECRET_SSH_GIT_BASE64 "$git_key"
 git_ssh_command="ssh -i $git_key -o IdentitiesOnly=yes"
+
+# dev-vm-github: a passphrase-less user key on the founder's own GitHub account, shared with the
+# kirilloak dev VM, so a rotation is both machines. It reaches exactly one repository here, this
+# one, and nothing Loady is on GitHub.
+github_key="$HOME/.ssh/kirilloak/dev-vm-github/id_ed25519"
+place_secret LD_SECRET_SSH_GITHUB_BASE64 "$github_key"
+github_ssh_command="ssh -i $github_key -o IdentitiesOnly=yes"
+
+# The founder's PAT, for read-only API work: pinning GitHub's host keys below, and GH_TOKEN in every
+# login shell for agents. gh is deliberately not installed (AGENTS.md rule 3) — curl is all the API
+# this machine needs, and under rule 2 nothing here opens a pull request anyway.
+github_token="${LD_SECRET_GITHUB_TOKEN:-}"
+github_token="${github_token// /}"
+github_token_file="$HOME/.config/loady/github-token"
+if [[ -n "$github_token" ]]; then
+  install -d -m 700 "$(dirname "$github_token_file")"
+  if [[ "$(cat "$github_token_file" 2>/dev/null || true)" != "$github_token" ]]; then
+    (umask 077 && printf '%s\n' "$github_token" >"$github_token_file")
+    echo "    wrote ${github_token_file/#$HOME/~}"
+  fi
+  chmod 600 "$github_token_file"
+else
+  git_todo="$git_todo
+  - no GitHub PAT in the register, so GH_TOKEN is unset and the host keys come unauthenticated"
+fi
 
 mkdir -p "$HOME/.ssh"
 touch "$HOME/.ssh/known_hosts"
@@ -456,6 +492,25 @@ else
   - could not reach ssh.dev.azure.com to pin its host key"
 fi
 
+# GitHub publishes its host keys through its own API, authenticated by the PAT when there is one.
+# That is a stronger source than ssh-keyscan, which answers with whatever is on the other end, and
+# it is why no fingerprint is pinned in this file: GitHub rotates these and the API follows.
+github_auth_header=()
+[[ -z "$github_token" ]] || github_auth_header=(-H "Authorization: Bearer $github_token")
+github_meta="$(curl -fsS --max-time 20 \
+  -H 'Accept: application/vnd.github+json' \
+  "${github_auth_header[@]}" \
+  https://api.github.com/meta 2>/dev/null || true)"
+github_host_keys=""
+[[ -z "$github_meta" ]] \
+  || github_host_keys="$(jq -r '.ssh_keys[]? | "github.com " + .' <<<"$github_meta" 2>/dev/null || true)"
+if [[ -n "$github_host_keys" ]]; then
+  while IFS= read -r line; do [[ -n "$line" ]] && add_known_host "$line"; done <<<"$github_host_keys"
+else
+  git_todo="$git_todo
+  - could not read api.github.com/meta to pin GitHub's host keys"
+fi
+
 log "git identity"
 git config --global user.name "$GIT_USER_NAME"
 git config --global user.email "$GIT_EMAIL"
@@ -477,23 +532,64 @@ clone_checkout() {
   git -C "$path" config core.sshCommand "$ssh_command"
 }
 
+key_usable() {
+  # key_usable <path>: present, and openable without a passphrase. A passphrase here would make
+  # every headless push prompt forever; the register is supposed to hold the passphrase-less copy.
+  local key="$1" label="$2"
+  if [[ ! -f "$key" ]]; then
+    git_todo="$git_todo
+  - no $label key in the register; run 'ld-tfin' in infra on the Mac and rerun (docs/manual-secrets.md)"
+    return 1
+  fi
+  if ! ssh-keygen -y -P "" -f "$key" >/dev/null 2>&1; then
+    git_todo="$git_todo
+  - the $label key is passphrase-protected; replace the register field with a passphrase-less copy (docs/manual-secrets.md)"
+    return 1
+  fi
+}
+
 log "checkouts"
-if [[ ! -f "$git_key" ]]; then
-  die "no git key in the register; run 'ld-tfin' in infra on the Mac and rerun (docs/manual-secrets.md)"
-elif ! ssh-keygen -y -P "" -f "$git_key" >/dev/null 2>&1; then
-  # A passphrase here would make every headless push prompt forever; the register is supposed to
-  # hold the passphrase-less copy, so say so plainly rather than hang later.
-  die "the git key is passphrase-protected; replace the register field with a passphrase-less copy (docs/manual-secrets.md)"
-else
-  clone_checkout "$LOADY_REPO_URL" "$REPO" "$git_ssh_command"
+# loady-one is what this machine exists for, so a missing Azure DevOps key is fatal. The GitHub
+# key is not: without it the VM still converges, builds and runs, and only this repository stays
+# un-cloned — which the todo at the end of the run says plainly.
+if ! key_usable "$git_key" "Azure DevOps"; then
+  die "no usable Azure DevOps key; run 'ld-tfin' in infra on the Mac and rerun (docs/manual-secrets.md)"
+fi
+clone_checkout "$LOADY_REPO_URL" "$REPO" "$git_ssh_command"
+
+# This repository, the setup itself. It is cloned rather than copied from the Mac so that an edit
+# made here — a bootstrap fix, an ld-* function, an agent config — is committed and pushed from
+# here. Both machines are ordinary checkouts of the same GitHub repository and neither overwrites
+# the other.
+if [[ -e "$VM_REPO" && ! -e "$VM_REPO/.git" ]]; then
+  # What earlier runs left: a copy the Mac rsynced here. It is not replaced, because nothing here
+  # deletes a directory the founder may have edited; removing it is one line and then a rerun.
+  git_todo="$git_todo
+  - $VM_REPO is the old copy, not a checkout, so it was left alone   # rm -rf $VM_REPO and rerun to clone it"
+elif key_usable "$github_key" "GitHub"; then
+  # Prove the key against the real remote before anything depends on it, non-interactively, so a
+  # key that cannot read this repository fails here rather than prompting inside a clone.
+  if github_probe="$(GIT_SSH_COMMAND="$github_ssh_command -o BatchMode=yes" \
+    git ls-remote --exit-code -h "$VM_REPO_URL" 2>&1 >/dev/null)"; then
+    echo "    dev-vm-github key reads $VM_REPO_URL"
+    clone_checkout "$VM_REPO_URL" "$VM_REPO" "$github_ssh_command"
+    # The founder's own address on his own repository; the global identity stays Loady's.
+    git -C "$VM_REPO" config user.name "$GIT_USER_NAME"
+    git -C "$VM_REPO" config user.email "$GITHUB_EMAIL"
+  else
+    git_todo="$git_todo
+  - the dev-vm-github key cannot read $VM_REPO_URL: ${github_probe//$'\n'/; }   # check it on github.com/settings/keys, then rerun"
+  fi
 fi
 
 # --------------------------------------------------------------------------------------------------
-# The checkout: agent files, dotfiles, and a warm cache so Rider's first open and the first
+# The checkouts: agent files, dotfiles, and a warm cache so Rider's first open and the first
 # ld-start are not a download.
 #
-# Nothing here touches a dirty working tree. Under AGENTS.md rule 2 nothing commits automatically,
-# so uncommitted work is the normal state on this machine and the disk is its only copy.
+# Nothing here touches a dirty working tree, in either checkout. Under AGENTS.md rule 2 nothing
+# commits automatically, so uncommitted work is the normal state on this machine and the disk is
+# its only copy. The $VM_REPO guard below is what keeps a failed GitHub clone from taking the rest
+# of the run with it.
 # --------------------------------------------------------------------------------------------------
 if [[ -d "$VM_REPO" ]]; then
   log "agent files and dotfiles"

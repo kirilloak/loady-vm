@@ -30,9 +30,9 @@ None. The credentials already exist and are already registered:
 
 - `workstation/keys` (`59967647-9d93-4e60-917f-b4bf015de599`), field `ssh_dev_vm_github_base64` —
   `dev-vm-github`, a passphrase-less user key on the founder's GitHub account, already used by the
-  costfluent dev VM.
+  kirilloak dev VM.
 - `prod-infra/prod-github` (`72c148f2-f62c-491f-97ca-b39a0171e3e3`), field `pat` — the founder's
-  PAT, the same one costfluent uses.
+  PAT, the same one kirilloak uses.
 
 Both are read straight from Bitwarden by `ld-tfin`, so nothing has to be generated, copied or
 registered by hand. The one thing to confirm on first run is that the key can read
@@ -52,7 +52,7 @@ to being working-tree state that nothing on either machine may destroy. `infra/s
 two callers are removed rather than kept as a fallback — two paths for the same tree is how a copy
 and a checkout end up disagreeing.
 
-The credential design is lifted from the costfluent dev VM, which has run it since 2026-09-12:
+The credential design is lifted from the kirilloak dev VM, which has run it since 2026-09-12:
 one key per service, each bound to its checkout through `core.sshCommand`, and the register as the
 only place a private key lives.
 
@@ -90,7 +90,7 @@ rule 4 already says about where daily work happens.
    Verify: `ld-tfin` prints no missing-field error, `shellcheck`, `terraform validate`, and the
    variables arrive on the VM (`sudo grep -c LD_SECRET .../environment` during a run).
 
-2. **`infra/bootstrap.sh` — the GitHub block.** Ported from costfluent's, minus `gh`:
+2. **`infra/bootstrap.sh` — the GitHub block.** Ported from kirilloak's, minus `gh`:
    place the key at `~/.ssh/loady/dev-vm-github/id_ed25519`; write the PAT to
    `~/.config/loady/github-token` at 0600 and export `GH_TOKEN`/`GITHUB_TOKEN` from the login shell;
    pin host keys from `curl -fsS https://api.github.com/meta` (the token in an `Authorization`
@@ -132,7 +132,7 @@ rule 4 already says about where daily work happens.
    for this repository alone, `gh` still not installed, no GitHub release downloads, nothing Loady
    on GitHub. Rule 5 loses the copy-not-checkout exception; both checkouts on the VM are
    authoritative working trees. `docs/manual-secrets.md` gains the two new register fields, what
-   each key opens, and the note that both are shared with the costfluent dev VM so a rotation is
+   each key opens, and the note that both are shared with the kirilloak dev VM so a rotation is
    two machines. `infra/README.md` and `infra/variables.tf` lose `send-tree.sh` and the copy claim.
    `docs/remote-development.md` gains the workflow in one line: edit on the VM, commit there, push,
    pull on the Mac before touching Terraform. Why: one fact, one file, and five files currently
@@ -166,7 +166,7 @@ rule 4 already says about where daily work happens.
 - **A converge no longer carries Mac-side work.** An edit made on the Mac and not pushed is
   invisible to the VM, which will read as "the converge did nothing" until it is understood. Step 7
   is what prevents that, which is why it is not optional.
-- **Shared credentials across two VMs.** The key and the PAT now serve both the costfluent dev VM
+- **Shared credentials across two VMs.** The key and the PAT now serve both the kirilloak dev VM
   and this one. A rotation is two register updates and two converges, and a compromise is two
   machines. Accepted deliberately: the alternative is a third key to manage, and both machines are
   the founder's own.
@@ -177,4 +177,4 @@ rule 4 already says about where daily work happens.
 
 ## Open questions
 
-None. The founder chose the costfluent credentials, key and PAT, and the personal GitHub identity.
+None. The founder chose the kirilloak credentials, key and PAT, and the personal GitHub identity.

@@ -1,10 +1,13 @@
 #!/usr/bin/env bash
 # Recreate the local containers from scratch: what the old `ld-reset` alias did, fixed and moved
-# here. Destroys the volumes, so the next ld-start reseeds.
+# here. Destroys the volumes, then hands off to `ld-dev.sh start`, which waits for readiness,
+# builds, reseeds the empty databases and starts the function hosts. Reset ends with a stack that
+# is up; `ld-start` is the same thing without the wipe.
 #
 # Usage:
-#   ld-reset.sh            containers only
-#   ld-reset.sh --hard     also dotnet clean and clear the run state
+#   ld-reset.sh                 recreate, then start
+#   ld-reset.sh --public        and the public function hosts
+#   ld-reset.sh --hard          also dotnet clean and clear the run state before starting
 set -euo pipefail
 LD_PROG=ld-reset
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -15,7 +18,14 @@ ld_need docker jq
 
 REPO="$(ld_repo)"
 HARD=0
-[[ "${1:-}" == --hard ]] && HARD=1
+START_ARGS=()
+for arg in "$@"; do
+  case "$arg" in
+    --hard)   HARD=1 ;;
+    --public) START_ARGS+=(--public) ;;
+    *)        ld_die "usage: ld-reset.sh [--public] [--hard]" ;;
+  esac
+done
 
 drift_check() {
   # compose/loady-vm.yaml is this repository's own file, so a change the team makes to theirs does
@@ -55,14 +65,12 @@ ld_compose down -v
 ld_log "pulling images"
 ld_compose pull
 
-ld_log "starting containers"
-ld_compose up -d
-
 if ((HARD)); then
   ld_log "dotnet clean"
   dotnet clean "$REPO/backend/Loady.slnx" --nologo --verbosity quiet
   rm -rf "${LOADY_STATE:?}/run"
 fi
 
-"$HERE/slot.sh" release loadystack
-ld_log "containers recreated. 'ld-start' builds, seeds and starts the function hosts."
+# The slot stays claimed: ld-dev.sh re-claims it for this same worktree, which is a no-op, and the
+# stack it leaves running is what holds it.
+exec "$HERE/ld-dev.sh" start "${START_ARGS[@]}"

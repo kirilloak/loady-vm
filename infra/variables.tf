@@ -95,13 +95,13 @@ variable "ssh_private_key_file" {
   default     = null
 }
 
-# The one key the VM needs to reach a git remote, as single-line base64 of the private key file.
-# ld-tfin loads it from Bitwarden through .tf-vars and the bootstrap writes it onto the VM, so a
-# rebuilt machine clones both repositories without a file being copied by hand. It is required
-# because a successful apply promises a cloned, built and warmed development workstation.
+# The keys the VM needs to reach its two git remotes, as single-line base64 of each private key
+# file. ld-tfin loads them from Bitwarden through .tf-vars and the bootstrap writes them onto the
+# VM, so a rebuilt machine clones both repositories without a file being copied by hand. Both are
+# required because a successful apply promises a cloned, built and warmed development workstation.
 
 variable "loady_ssh_git_base64" {
-  description = "The founder's existing Loady key (~/.ssh/loady/id_rsa on the Mac) with its passphrase removed. The one remote the VM uses is Azure DevOps, where this key is already registered. RSA because Azure DevOps accepts nothing else; passphrase-less because a headless Rider backend and an agent shell cannot answer a prompt"
+  description = "The founder's existing Loady key (~/.ssh/loady/id_rsa on the Mac) with its passphrase removed, for the loady-one checkout. Azure DevOps is the one remote it reaches, where it is already registered. RSA because Azure DevOps accepts nothing else; passphrase-less because a headless Rider backend and an agent shell cannot answer a prompt"
   type        = string
   sensitive   = true
 
@@ -109,4 +109,22 @@ variable "loady_ssh_git_base64" {
     condition     = trimspace(var.loady_ssh_git_base64) != ""
     error_message = "loady_ssh_git_base64 must contain the base64-encoded Git private key."
   }
+}
+
+variable "github_ssh_base64" {
+  description = "The dev-vm-github key (~/.ssh/kirilloak/dev-vm-github/id_ed25519 on the VM) with its passphrase removed, for the loady-vm checkout. A user key on the founder's own GitHub account, shared with that VM, so a rotation is both machines"
+  type        = string
+  sensitive   = true
+
+  validation {
+    condition     = trimspace(var.github_ssh_base64) != ""
+    error_message = "github_ssh_base64 must contain the base64-encoded GitHub private key."
+  }
+}
+
+variable "github_token" {
+  description = "The founder's classic PAT, shared with the kirilloak dev VM. Read-only API use here: pinning GitHub's SSH host keys from api.github.com/meta, and GH_TOKEN for agents. Optional, because everything it does degrades to a warning"
+  type        = string
+  sensitive   = true
+  default     = null
 }

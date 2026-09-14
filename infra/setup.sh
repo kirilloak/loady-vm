@@ -4,14 +4,14 @@
 # file, which runs the same bootstrap as its post step; this is the on-demand path, without
 # Terraform.
 #
-# It carries no files. Everything the VM needs is either in a repository the bootstrap clones or in
-# the register it hands over — dotfiles/ owns the agent and Rider configuration, which is the one
-# thing that would otherwise have been a copy from this Mac. A converge command with no
-# file-copying half also cannot silently overwrite something on the VM.
+# It carries no files but the bootstrap itself. Everything else the VM needs is in one of the two
+# repositories the bootstrap clones — including this one, which the VM checks out from GitHub and
+# the founder commits to there. A converge with no file-copying half cannot overwrite work sitting
+# uncommitted on that machine.
 #
-# Run it from this root after `ld-tfin`, which exports the register as TF_VAR_loady_ssh_git_base64;
-# run it from anywhere without, and the bootstrap converges everything except the keys, stopping at
-# the clone.
+# Run it from this root after `ld-tfin`, which exports the register as TF_VAR_loady_ssh_git_base64,
+# TF_VAR_github_ssh_base64 and TF_VAR_github_token; run it from anywhere without, and the bootstrap
+# converges everything except the keys, stopping at the clones.
 #
 # Usage: infra/setup.sh [ssh-host]      default: loady-vm
 set -euo pipefail
@@ -20,7 +20,6 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 HOST="${1:-${LD_VM_HOST:-loady-vm}}"
 BOOTSTRAP="$ROOT_DIR/bootstrap.sh"
 RUNNER="$ROOT_DIR/run-bootstrap.sh"
-SEND_TREE="$ROOT_DIR/send-tree.sh"
 REMOTE_DIR=/home/dev/.cache/loady-bootstrap
 
 # ssh forwards this Mac's LC_* to the VM, whose only locale is C.UTF-8; anything else makes every
@@ -40,23 +39,23 @@ ssh -o ConnectTimeout=10 -o BatchMode=yes "$HOST" true \
   || { echo "ld-vm-setup: cannot reach '$HOST' over SSH with the key in ssh-agent" >&2; exit 1; }
 
 echo "==> bootstrap on $HOST"
-register=0
-[[ -z "${TF_VAR_loady_ssh_git_base64:-}" ]] || register=1
-[[ $register -eq 1 ]] \
-  || echo "    (no TF_VAR_loady_ssh_git_base64 in this shell — run 'ld-tfin' in $ROOT_DIR first to carry the keys)"
+[[ -n "${TF_VAR_loady_ssh_git_base64:-}" && -n "${TF_VAR_github_ssh_base64:-}" ]] \
+  || echo "    (no keys in this shell — run 'ld-tfin' in $ROOT_DIR first to carry them)"
 
+# Each is optional here so a converge without the register still upgrades the machine and stops at
+# the clone it cannot do, rather than refusing to run at all.
 env_file="$(
   [[ -z "${TF_VAR_loady_ssh_git_base64:-}" ]] \
     || printf 'export LD_SECRET_SSH_GIT_BASE64=%q\n' "$TF_VAR_loady_ssh_git_base64"
+  [[ -z "${TF_VAR_github_ssh_base64:-}" ]] \
+    || printf 'export LD_SECRET_SSH_GITHUB_BASE64=%q\n' "$TF_VAR_github_ssh_base64"
+  [[ -z "${TF_VAR_github_token:-}" ]] \
+    || printf 'export LD_SECRET_GITHUB_TOKEN=%q\n' "$TF_VAR_github_token"
 )"
 
 # The secrets travel as a 0600 file over stdin rather than as process arguments. run-bootstrap.sh
 # moves that file to the run's own copy and removes this one as the run starts, and removes the copy
 # when it ends.
-# The VM reads this repository — scripts/, compose/, dotfiles/, agents/ — but does not clone it:
-# it is the Mac's, and the VM reaches Azure DevOps only (AGENTS.md rule 3). So send it first.
-"$SEND_TREE" "$HOST"
-
 # shellcheck disable=SC2029  # REMOTE_DIR is this script's own constant, and expanding it here is
 # what puts the path in the remote command.
 ssh "$HOST" "install -d -m 700 $REMOTE_DIR"

@@ -30,28 +30,36 @@ Every decision in this repository follows from these. They are not preferences.
    The single exception is `git worktree add` creating a local branch (`ld-stn`). It publishes
    nothing.
 
-3. **The VM holds Loady resources only, and reaches Azure DevOps only.** `~/loady-one` over
-   `git@ssh.dev.azure.com` is the single checkout and the single git remote on that machine,
-   reached with the key the bootstrap places. Nothing on the VM touches GitHub: not a remote, not a
-   release download, not `gh`, which is not installed and must not be. This repository keeps its
-   GitHub remote, but only on the Mac, where it is edited, committed and pushed; the VM receives it
-   as files from `infra/send-tree.sh`. No Azure DevOps web UI or `az repos` automation either —
-   pull requests are the founder's, by hand.
+3. **Two checkouts on the VM, two remotes, one key each.** `~/loady-one` over
+   `git@ssh.dev.azure.com` with the Loady key, and `~/loady-vm` — this repository — over
+   `git@github.com:kirilloak/loady-vm.git` with the `dev-vm-github` key. Both keys come from the
+   register and each checkout is bound to its own with `core.sshCommand`, so nothing depends on
+   which key ssh would have offered first.
+
+   Nothing Loady is on GitHub and nothing of this setup is on Azure DevOps. That is the boundary,
+   not the number of services. Beyond it: no `gh`, which is not installed and must not be; no
+   release downloads from GitHub, because everything installed comes from apt or a vendor
+   installer; no GitHub repository other than this one; no Azure DevOps web UI or `az repos`
+   automation. Pull requests are the founder's, by hand.
+
+   The GitHub PAT the register carries is for reading the API — pinning GitHub's host keys, and
+   `GH_TOKEN` for agents. Under rule 2 it never writes.
 
 4. **The Mac is a client, plus a cold fallback.** Daily work happens on the VM. The Mac runs the
    Rider client, a browser, `ssh`, and the Terraform root in `infra`. Its `~/loady-one`
    checkout exists only for when the Proxmox host is down; nothing synchronises the two, and a
    fallback session starts with a fetch and ends with a push.
 
-5. **The VM is disposable — its working tree is not.** Nothing on the VM's disk is authoritative
-   except uncommitted and unpushed Git work in `~/loady-one`, which under rule 2 is the normal
-   state. Nothing here ever stashes, resets, cleans or force-checks-out a dirty tree. `ld-tfd`
-   converges the VM that is there rather than replacing it, and `ld-tfd --rebuild` refuses to
-   destroy it while any such work exists.
+5. **The VM is disposable — its working trees are not.** Nothing on the VM's disk is authoritative
+   except uncommitted and unpushed Git work, in `~/loady-one` and in `~/loady-vm` alike, which
+   under rule 2 is the normal state in both. Nothing here ever stashes, resets, cleans or
+   force-checks-out a dirty tree, and nothing copies over one. `ld-tfd` converges the VM that is
+   there rather than replacing it, and `ld-tfd --rebuild` refuses to destroy it while any such work
+   exists in either checkout or in any worktree.
 
-   `~/loady-vm` on the VM is the exception, and is not a checkout at all: it is a copy the Mac
-   sends, replaced on every converge. Edit this setup on the Mac. An edit made to that copy has no
-   remote to reach and is gone at the next `ld-vm-setup`.
+   So this setup is edited on the VM, where the work happens, and committed and pushed from there.
+   The Mac's checkout is an ordinary second checkout of the same repository: pull before editing
+   it, which in practice means before running Terraform. Nothing synchronises the two but GitHub.
 
 ## Where knowledge lives
 
@@ -62,7 +70,6 @@ One fact, one file. Two files stating the same thing will disagree eventually.
 | The VM: sizing, address, image, lifecycle | `infra/*.tf` and `infra/README.md` |
 | What is installed and configured inside the VM | `infra/bootstrap.sh` |
 | Running the bootstrap detached, and attaching to it | `infra/run-bootstrap.sh` |
-| Sending this repository to the VM | `infra/send-tree.sh` |
 | Converging the VM from the Mac | `infra/setup.sh` |
 | Architecture, Rider, ports, boundaries, streams | `docs/remote-development.md` |
 | The Bitwarden register and recovery | `docs/manual-secrets.md` |

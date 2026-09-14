@@ -80,9 +80,9 @@ commits automatically and the disk is the only copy.
 ## Running Loady
 
 ```bash
-ld-reset            # recreate the containers from scratch (--hard also cleans the build)
 ld-start            # containers, readiness, build, seed, the five default function hosts
 ld-start --public   # and the six public ones
+ld-reset            # the same, after wiping the containers and volumes (--hard also cleans the build)
 ld-fe               # the frontend dev server in local mode
 ld-status           # every host, the containers, and who holds the slot
 ld-logs Loady.Backend.Api
@@ -206,12 +206,23 @@ workspace: nothing synchronises it with the VM, and Git remotes are the only tra
 fallback session starts with a fetch and ends with a push. The Mac's toolchain is not maintained
 for this solution, which is what keeps the arrangement honest.
 
+## Editing the setup itself
+
+`~/loady-vm` on the VM is a checkout of this repository, cloned from GitHub with the `dev-vm-github`
+key the register carries. Edit the setup there — a bootstrap fix, an `ld-*` function, an agent
+config — commit it there, and push. The Mac holds a second ordinary checkout of the same repository,
+for Terraform, which has to run there; pull it before editing or applying.
+
+Nothing copies the tree between the two machines any more, in either direction, which is what makes
+uncommitted work on the VM safe from a converge. The rule is the ordinary Git one: push what you
+want the other machine to see.
+
 ## Backups and recovery
 
 Git carries the work. Push before anything risky, and treat an unpushed branch as the only thing a
 VM loss can cost — which under rule 2 is a real risk, so push at the end of a session.
 
 The VM is disposable and has no Proxmox backup job: a rebuild is `ld-tfd --rebuild`, which refuses
-while the VM holds uncommitted or unpushed work in the checkout or any worktree. Take a snapshot by hand
+while the VM holds uncommitted or unpushed work in either checkout or any worktree. Take a snapshot by hand
 before an Ubuntu release upgrade and delete it after validating; a snapshot is not a backup and
 neither replaces Git.
