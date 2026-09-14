@@ -5,7 +5,7 @@
     <option name="PROJECT_TFM" value="net10.0" />
     <option name="FUNCTION_NAMES" value="" />
     <option name="PROJECT_ARGUMENTS_TRACKING" value="1" />
-    <option name="PROGRAM_PARAMETERS" value="host start --pause-on-error --port 7160" />
+    <option name="PROGRAM_PARAMETERS" value="host start --pause-on-error --port 7160 --address 0.0.0.0" />
     <option name="PROJECT_WORKING_DIRECTORY_TRACKING" value="1" />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/src/Domains/Loady.Backend.Api/bin/Debug/net10.0" />
     <option name="TRACK_ENVS" value="0" />
