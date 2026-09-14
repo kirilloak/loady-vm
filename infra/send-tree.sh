@@ -18,6 +18,9 @@ DEST=loady-vm
 
 command -v rsync >/dev/null || { echo "send-tree: rsync is not installed on this Mac" >&2; exit 1; }
 
+ssh -o BatchMode=yes -o ConnectTimeout=10 "$HOST" true \
+  || { echo "send-tree: cannot reach $HOST over SSH" >&2; exit 1; }
+
 # This runs before the bootstrap has installed anything, and whether the cloud image carries rsync
 # is not something to depend on. The bootstrap keeps it installed from then on.
 ssh -o BatchMode=yes "$HOST" 'command -v rsync >/dev/null || sudo apt-get install -y rsync' \

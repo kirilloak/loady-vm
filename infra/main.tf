@@ -131,15 +131,17 @@ resource "terraform_data" "bootstrap" {
     timeout     = "5m"
   }
 
+  # First, because this one waits: a remote-exec blocks on the connection block above until sshd
+  # answers, and a freshly created VM is still booting. Everything after it can assume SSH.
+  provisioner "remote-exec" {
+    inline = ["install -d -m 700 /home/dev/.cache/loady-bootstrap"]
+  }
+
   # The VM reads this repository but does not clone it: it is the Mac's, and the VM reaches Azure
-  # DevOps only (AGENTS.md rule 3). This runs on the Mac, over the same key as the connection below.
+  # DevOps only (AGENTS.md rule 3). This runs on the Mac, over the same key as the connection above.
   provisioner "local-exec" {
     command     = "${local.send_tree_path} dev@${local.ipv4_address}"
     interpreter = ["/bin/bash", "-c"]
-  }
-
-  provisioner "remote-exec" {
-    inline = ["install -d -m 700 /home/dev/.cache/loady-bootstrap"]
   }
 
   provisioner "file" {
