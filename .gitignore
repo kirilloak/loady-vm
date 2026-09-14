@@ -1,0 +1,15 @@
+# Terraform working state. The state file holds the Proxmox password and a Tailscale
+# auth key in clear; it is never committed. docs/manual-secrets.md owns what to do
+# when it is lost.
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+
+# Tracked on purpose: .terraform.lock.hcl (provider pinning) and infra/loady-vm/.tf-vars
+# (Bitwarden item ids, not secrets).
+
+# Local editor and OS noise
+.idea/
+.DS_Store

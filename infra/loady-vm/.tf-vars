@@ -1,0 +1,19 @@
+# Terraform inputs, loaded from Bitwarden by `ld-tfin`.
+#
+# Format: <TF_VAR name> <Bitwarden item id> [password|username|notes|field] [field name]
+# The default type is `password`. These are item identifiers, not secrets, which is why this file
+# is tracked. docs/manual-secrets.md owns what each item must contain.
+
+# dev-infra/dev-proxmox — root@pam on the Proxmox API
+TF_VAR_virtual_environment_password 96ed5a9b-7d25-4889-a8f2-b3900126fed1
+
+# prod-infra/prod-tailscale — the founder's personal API key and tailnet
+TF_VAR_tailscale_api_key c38d5c50-189f-4ed0-9bd7-b3b201685236 field api_key
+TF_VAR_tailscale_tailnet c38d5c50-189f-4ed0-9bd7-b3b201685236 field tailnet
+
+# loady-vm/keys — created by hand in step 14; see docs/manual-secrets.md.
+# Uncomment both lines once the item exists and replace the id. Until then the bootstrap runs and
+# reports that it could not clone either repository, which is the honest outcome rather than a
+# confusing failure.
+# TF_VAR_loady_ssh_ado_base64 REPLACE-WITH-loady-vm-keys-ITEM-ID field ssh_loady_ado_base64
+# TF_VAR_loady_ssh_github_base64 REPLACE-WITH-loady-vm-keys-ITEM-ID field ssh_loady_vm_github_base64

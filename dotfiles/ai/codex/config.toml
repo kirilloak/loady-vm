@@ -1,0 +1,20 @@
+# Codex configuration for the development VM. The app rewrites this file with its own sections as
+# it runs, and dotfiles/sync.sh carries those changes back here as a working-tree change to commit.
+# Do not hand-edit it while Codex is running: a change on both sides between syncs is a conflict.
+
+model_reasoning_effort = "medium"
+project_doc_max_bytes = 65536
+
+# Trust roots, so Codex reads these without asking. The home directory covers a worktree created
+# after this file was written.
+[projects."/home/dev"]
+trust_level = "trusted"
+
+[projects."/home/dev/loady-one"]
+trust_level = "trusted"
+
+[projects."/home/dev/loady-vm"]
+trust_level = "trusted"
+
+[projects."/home/dev/loady-worktrees"]
+trust_level = "trusted"

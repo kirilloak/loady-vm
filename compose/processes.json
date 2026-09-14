@@ -1,0 +1,51 @@
+{
+  "comment": [
+    "The function hosts ld-dev.sh starts, and the ports ufw lets the apim container reach.",
+    "This is exactly the set loady-one/backend/backend.ps1 starts, in its order: the five default",
+    "hosts, then the public ones behind --public (-IncludePublic there).",
+    "Loady.Reports.Api and Loady.Imports.Api are deliberately absent. backend.ps1 does not start",
+    "them, and Loady.Imports.Api has no local.settings.json, so it has no local configuration to",
+    "start with.",
+    "'wait' is how long ld-dev.sh pauses before the next group, mirroring the Start-Sleep calls in",
+    "backend.ps1: the first two hosts warm the shared runtime and the rest fail to bind if they all",
+    "start at once."
+  ],
+  "dotnet": "net10.0",
+  "groups": [
+    {
+      "wait": 0,
+      "public": false,
+      "processes": [
+        { "name": "Loady.Backend.Api", "port": 7160 },
+        { "name": "Loady.Events.Api", "port": 7296 }
+      ]
+    },
+    {
+      "wait": 20,
+      "public": false,
+      "processes": [
+        { "name": "Loady.Backoffice.Api", "port": 7001 },
+        { "name": "Loady.Loady2Go.Api", "port": 7152 },
+        { "name": "Loady.Loady2Share.Api", "port": 7094 }
+      ]
+    },
+    {
+      "wait": 20,
+      "public": true,
+      "processes": [
+        { "name": "Loady.Public.Api", "port": 7247 },
+        { "name": "Loady.Public.BusinessPartners.Api", "port": 7248 },
+        { "name": "Loady.Public.Lanes.Api", "port": 7249 }
+      ]
+    },
+    {
+      "wait": 20,
+      "public": true,
+      "processes": [
+        { "name": "Loady.Public.LoadingPoints.Api", "port": 7253 },
+        { "name": "Loady.Public.Products.Api", "port": 7250 },
+        { "name": "Loady.Public.UnloadingPoints.Api", "port": 7254 }
+      ]
+    }
+  ]
+}
