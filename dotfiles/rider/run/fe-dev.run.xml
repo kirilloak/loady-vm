@@ -1,0 +1,19 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="fe-dev" type="js.build_tools.npm">
+    <!-- the deployed dev APIM: no local backend, no containers, no az login -->
+    <!-- The solution is backend/Loady.slnx, so $PROJECT_DIR$ is backend/ and the frontend is one
+         level up. This is the only change from the WebStorm original. -->
+    <package-json value="$PROJECT_DIR$/../frontend/package.json" />
+    <command value="start" />
+    <node-interpreter value="project" />
+    <package-manager value="yarn" />
+    <envs>
+      <env name="VUE_APP_API_BASE_URL" value="https://apimgmt-loady-dev.azure-api.net/app" />
+      <env name="VUE_APP_AUTH_ENABLE_LOCAL_MODE" value="false" />
+    </envs>
+    <EXTENSION ID="com.intellij.javascript.debugger.execution.StartBrowserRunConfigurationExtension">
+      <browser with-js-debugger="true" />
+    </EXTENSION>
+    <method v="2" />
+  </configuration>
+</component>

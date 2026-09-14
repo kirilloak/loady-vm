@@ -1,0 +1,20 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="fe-sso" type="js.build_tools.npm">
+    <!-- real B2C sign-in against the local backend; the pair of be-backend-sso -->
+    <!-- The solution is backend/Loady.slnx, so $PROJECT_DIR$ is backend/ and the frontend is one
+         level up. This is the only change from the WebStorm original. -->
+    <package-json value="$PROJECT_DIR$/../frontend/package.json" />
+    <command value="start" />
+    <node-interpreter value="project" />
+    <package-manager value="yarn" />
+    <envs>
+      <env name="PORT" value="8080" />
+      <env name="VUE_APP_API_BASE_URL" value="http://localhost:7000/app" />
+      <env name="VUE_APP_AUTH_ENABLE_LOCAL_MODE" value="false" />
+    </envs>
+    <EXTENSION ID="com.intellij.javascript.debugger.execution.StartBrowserRunConfigurationExtension">
+      <browser with-js-debugger="true" />
+    </EXTENSION>
+    <method v="2" />
+  </configuration>
+</component>

@@ -1,0 +1,21 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="fe-loady-admin" type="js.build_tools.npm">
+    <!-- local identity headers, the loady admin user -->
+    <!-- The solution is backend/Loady.slnx, so $PROJECT_DIR$ is backend/ and the frontend is one
+         level up. This is the only change from the WebStorm original. -->
+    <package-json value="$PROJECT_DIR$/../frontend/package.json" />
+    <command value="start" />
+    <node-interpreter value="project" />
+    <package-manager value="yarn" />
+    <envs>
+      <env name="VUE_APP_API_BASE_URL" value="http://localhost:7000/app" />
+      <env name="VUE_APP_AUTH_ENABLE_LOCAL_MODE" value="true" />
+      <env name="VUE_APP_AUTH_LOCAL_COMPANY_ID" value="TESTCOMPANY1" />
+      <env name="VUE_APP_AUTH_LOCAL_USER_ID" value="99999999-9999-9999-9999-999999999999" />
+    </envs>
+    <EXTENSION ID="com.intellij.javascript.debugger.execution.StartBrowserRunConfigurationExtension">
+      <browser with-js-debugger="true" />
+    </EXTENSION>
+    <method v="2" />
+  </configuration>
+</component>
