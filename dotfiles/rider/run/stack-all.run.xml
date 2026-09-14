@@ -1,10 +1,9 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="stack-all" type="CompoundRunConfigurationType">
-    <!-- The main backend and frontend plus events, Loady2Go and Loady2Share; no public APIs. -->
-    <toRun name="stack-be-fe" type="CompoundRunConfigurationType" />
     <toRun name="be-events" type="AzureFunctionAppRun" />
     <toRun name="be-loady2go" type="AzureFunctionAppRun" />
     <toRun name="be-loady2share" type="AzureFunctionAppRun" />
+    <toRun name="stack-be-fe" type="CompoundRunConfigurationType" />
     <method v="2" />
   </configuration>
 </component>
