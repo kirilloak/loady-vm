@@ -83,20 +83,22 @@ pin a key whose fingerprint does not match, which is the behaviour you want if i
 
 ### Storing it
 
+The field goes into Bitwarden by hand, in the web vault or the desktop app. Only these run locally.
+
+Put the base64 of the passphrase-less copy on the clipboard:
+
 ```bash
-export BW_SESSION="$(bw unlock --raw)" && bw sync
-id=06e7a977-9e1f-4641-8e36-b4c50096047a    # workstation/loady
+base64 < /tmp/loady-git-vm | tr -d '\n' | pbcopy
+```
 
-store() {   # store <field name> <private key file>
-  bw get item "$id" \
-    | jq --arg n "$1" --arg v "$(base64 < "$2" | tr -d '\n')" \
-         '.fields = ((.fields // []) | map(select(.name != $n))) + [{name: $n, value: $v, type: 1}]' \
-    | bw encode | bw edit item "$id" >/dev/null
-}
+Then in item `workstation/loady` (`06e7a977-9e1f-4641-8e36-b4c50096047a`) add a **hidden** custom field named
+`ssh_loady_git_base64`, paste, and save. Hidden matters: a visible field is a private key in plain sight.
 
-store ssh_loady_git_base64 /tmp/loady-git-vm
+Then destroy the copy — the Mac keeps its own encrypted original, so nothing is lost:
 
+```bash
 rm -P /tmp/loady-git-vm
+pbcopy < /dev/null
 ```
 
 The `workstation/loady` line in `infra/loady-vm/.tf-vars` already names this item, so nothing else changes once the
@@ -104,16 +106,13 @@ field exists.
 
 ### Checking
 
-Every field `.tf-vars` names exists and is non-empty — prints the ones that do not:
+What `.tf-vars` expects to find, item and field, so the vault can be checked against it by eye:
 
 ```bash
-awk '!/^[[:space:]]*(#|$)/ && $3 == "field" { print $2, $4 }' infra/loady-vm/.tf-vars | sort -u \
-  | while read -r item field; do
-      bw get item "$item" \
-        | jq -e --arg f "$field" '.fields[]? | select(.name == $f and (.value | length > 0))' >/dev/null \
-        || echo "missing: $field on $item"
-    done
+awk '!/^[[:space:]]*(#|$)/ && $3 == "field" { print $2, $4 }' infra/loady-vm/.tf-vars | sort -u
 ```
+
+The real check is the next `ld-tfin`: it fails loudly on a field that is missing or empty.
 
 ## Rotating a key
 
