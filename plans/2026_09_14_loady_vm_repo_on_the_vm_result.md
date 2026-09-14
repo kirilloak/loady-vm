@@ -4,8 +4,9 @@ Plan: [2026_09_14_loady_vm_repo_on_the_vm.md](2026_09_14_loady_vm_repo_on_the_vm
 
 ## Status
 
-Complete on the Mac, unverified on a machine: every file is written and statically checked, and the
-founder is rebuilding the VM to test it end to end. Nothing was changed on the VM that exists now.
+Complete and verified on the rebuilt VM: the bootstrap runs to status 0, `~/loady-vm` there is a
+GitHub checkout bound to the `dev-vm-github` key, and `~/loady-one` still uses the Loady key and the
+Loady address.
 
 ## Files created or edited
 
@@ -29,6 +30,7 @@ founder is rebuilding the VM to test it end to end. Nothing was changed on the V
   checkout to the founder's GitHub noreply address. `key_usable` replaces the two inline key checks:
   the Azure DevOps key is still fatal, the GitHub key is a todo line, and an old copy at
   `~/loady-vm` is left alone with a todo rather than dying.
+- `infra/bootstrap.sh`, second pass — two defects the first real run exposed; see below.
 - `scripts/rebuild-loady-vm.zsh` — the pre-rebuild check loops over both checkouts instead of
   `cd`-ing into `loady-one` (and so no longer skips everything when that one is missing).
 - `AGENTS.md` — rule 3 rewritten around two checkouts and two keys, with the boundary restated as
@@ -45,11 +47,11 @@ founder is rebuilding the VM to test it end to end. Nothing was changed on the V
 
 ## Manual actions for the founder
 
-- Rebuild: `ld-tfin && ld-tfd --rebuild`. Nothing on the current VM was touched, so it still holds
-  the old copy at `~/loady-vm`; a converge instead of a rebuild would print a todo asking for
-  `rm -rf ~/loady-vm` and a rerun.
-- After the run, the end-to-end check the goal names: edit something in `~/loady-vm` on the VM,
-  commit, push, and pull it on the Mac.
+- Rerun `ld-tfd`. The apply failed at the bootstrap, so Terraform never recorded
+  `terraform_data.bootstrap`; the VM itself is converged and correct, and the rerun is Terraform
+  catching up with it rather than more work on the machine.
+- The end-to-end check the goal names, which needs a real commit and is therefore the founder's
+  under rule 2: edit something in `~/loady-vm` on the VM, commit, push, and pull it on the Mac.
 - Nothing to register anywhere. Both GitHub credentials already exist in Bitwarden.
 
 ## Notes
@@ -64,6 +66,17 @@ founder is rebuilding the VM to test it end to end. Nothing was changed on the V
 - The Claude deny list is unchanged and repository-agnostic, so agents on the VM still cannot
   commit or push in either checkout.
 
+## Defects found by running it, and fixed
+
+1. **`sudo` strips the environment.** `env LOADY_REPO_DIR=... sudo docker compose pull` lost the
+   variable, and the compose file's `${LOADY_REPO_DIR:?}` on the nginx.conf mount failed the run
+   with "container images failed". On a first boot the `dev` user is not yet in the `docker` group
+   for that session, so the sudo branch is exactly the branch a fresh VM takes — which is why this
+   had never fired before: no earlier run reached this step. The `env` now goes inside the sudo.
+2. **A converge without the register reported the PAT missing** even though an earlier run had
+   placed it. The token block now falls back to the file it wrote, and only reports a missing PAT
+   when neither the variable nor the file is there.
+
 ## Verification performed
 
 - `shellcheck` on the VM for `bootstrap.sh`, `setup.sh` and `run-bootstrap.sh`: clean.
@@ -74,5 +87,18 @@ founder is rebuilding the VM to test it end to end. Nothing was changed on the V
 - `terraform fmt -check` and `terraform validate`: pass.
 - `zsh -n` on `scripts/rebuild-loady-vm.zsh` and `scripts/loady-shell.zsh`: pass.
 - `grep -ril costfluent` over the repository: no matches.
-- Not run: the bootstrap itself, the clone, the key probe, the `api.github.com/meta` pin, and the
-  rebuild refusal against a dirty `~/loady-vm`. All of those need the rebuild the founder is doing.
+- On the rebuilt VM, a full `run-bootstrap.sh` to `Done in 289s: the VM matches this script`, with
+  no todo lines: the images pull, and the second run is a clean converge.
+- `git -C ~/loady-vm remote -v` is `git@github.com:kirilloak/loady-vm.git`; its `core.sshCommand`
+  names `~/.ssh/kirilloak/dev-vm-github/id_ed25519` and `~/loady-one`'s names `~/.ssh/loady/id_rsa`.
+- `GIT_AUTHOR_IDENT` is `79607671+kirilloak@users.noreply.github.com` in `~/loady-vm` and
+  `kirill.starodubtsev@loady.com` in `~/loady-one`.
+- Three `github.com` host keys in the VM's `known_hosts`, from the API; the clone's own key probe
+  printed `dev-vm-github key reads git@github.com:kirilloak/loady-vm.git`.
+- `~/.config/loady/github-token` is 0600, and a login shell has `GH_TOKEN` and `GITHUB_TOKEN` at 40
+  characters each. `gh` is not installed.
+- The rebuild refusal: the check from `rebuild-loady-vm.zsh` run against the VM with a probe file in
+  `~/loady-vm` reported `loady-vm: ?? .ld-refusal-probe`. The probe was removed and that checkout is
+  clean again.
+- `ld-status` lists every function host and the compose stack.
+- Not run: a commit and push from the VM, which under rule 2 is the founder's.

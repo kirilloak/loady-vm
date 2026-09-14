@@ -463,6 +463,10 @@ if [[ -n "$github_token" ]]; then
     echo "    wrote ${github_token_file/#$HOME/~}"
   fi
   chmod 600 "$github_token_file"
+elif [[ -s "$github_token_file" ]]; then
+  # A converge run without the register: the token an earlier run placed is still there and still
+  # good, so use it rather than reporting it missing.
+  github_token="$(cat "$github_token_file")"
 else
   git_todo="$git_todo
   - no GitHub PAT in the register, so GH_TOKEN is unset and the host keys come unauthenticated"
@@ -620,10 +624,12 @@ if [[ -d "$REPO/.git" ]]; then
   run_with_progress "yarn install" yarn --cwd "$REPO/frontend" install --frozen-lockfile
 
   # The container images, so the first ld-start is not a download. The docker group joined above is
-  # not in this session's groups until the next login, hence sudo when it is missing.
-  docker_cmd=(docker)
-  id -nG | tr ' ' '\n' | grep -qx docker || docker_cmd=(sudo docker)
-  run_with_progress "container images" env LOADY_REPO_DIR="$REPO" "${docker_cmd[@]}" compose \
+  # not in this session's groups until the next login, hence sudo when it is missing — and env
+  # inside the sudo rather than in front of it, because sudo resets the environment and the compose
+  # file requires LOADY_REPO_DIR for the nginx.conf it mounts out of the checkout.
+  docker_cmd=(env "LOADY_REPO_DIR=$REPO" docker)
+  id -nG | tr ' ' '\n' | grep -qx docker || docker_cmd=(sudo env "LOADY_REPO_DIR=$REPO" docker)
+  run_with_progress "container images" "${docker_cmd[@]}" compose \
     --project-directory "$VM_REPO/compose" -f "$VM_REPO/compose/loady-vm.yaml" pull --quiet
 
   # The Cosmos emulator's certificate can only be taken from a running emulator, so a first
