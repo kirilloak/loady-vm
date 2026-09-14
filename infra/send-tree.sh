@@ -18,12 +18,21 @@ DEST=loady-vm
 
 command -v rsync >/dev/null || { echo "send-tree: rsync is not installed on this Mac" >&2; exit 1; }
 
-ssh -o BatchMode=yes -o ConnectTimeout=10 "$HOST" true \
-  || { echo "send-tree: cannot reach $HOST over SSH" >&2; exit 1; }
+SSH_OPTS=(-o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new)
+
+# The VM is disposable and its host key changes with it, so the Mac's known_hosts entry for the old
+# one is the normal state after a rebuild — including a rebuild done outside ld-tfd. Drop the stale
+# entry and learn the new key rather than fail. The trust this gives up is the trust Terraform's own
+# connection to this machine never had: it does not check host keys at all.
+if ! ssh "${SSH_OPTS[@]}" "$HOST" true 2>/dev/null; then
+  ssh-keygen -R "${HOST#*@}" >/dev/null 2>&1 || true
+  ssh "${SSH_OPTS[@]}" "$HOST" true \
+    || { echo "send-tree: cannot reach $HOST over SSH" >&2; exit 1; }
+fi
 
 # This runs before the bootstrap has installed anything, and whether the cloud image carries rsync
 # is not something to depend on. The bootstrap keeps it installed from then on.
-ssh -o BatchMode=yes "$HOST" 'command -v rsync >/dev/null || sudo apt-get install -y rsync' \
+ssh "${SSH_OPTS[@]}" "$HOST" 'command -v rsync >/dev/null || sudo apt-get install -y rsync' \
   || { echo "send-tree: no rsync on $HOST and it could not be installed" >&2; exit 1; }
 
 echo "==> sending the loady-vm tree to $HOST"
@@ -31,6 +40,7 @@ echo "==> sending the loady-vm tree to $HOST"
 # worse than a missing one. The exclusions are the things that are either the Mac's alone or are
 # state rather than source.
 rsync -a --delete \
+  -e "ssh ${SSH_OPTS[*]}" \
   --exclude '.git/' \
   --exclude '.terraform/' \
   --exclude 'terraform.tfstate*' \
