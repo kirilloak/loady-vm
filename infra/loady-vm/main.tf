@@ -5,7 +5,7 @@
 
 locals {
   ssh_public_key = var.ssh_public_key != null ? var.ssh_public_key : trimspace(
-    file(pathexpand("~/.ssh/loady/loady-vm/id_ed25519.pub"))
+    file(pathexpand("~/.ssh/id_ed25519.pub"))
   )
   ipv4_address       = split("/", var.ipv4_cidr)[0]
   bootstrap_path     = "${path.module}/bootstrap.sh"
@@ -190,8 +190,7 @@ resource "terraform_data" "bootstrap" {
   provisioner "file" {
     content     = <<-EOT
       export TS_AUTHKEY="$(printf %s '${base64encode(tailscale_tailnet_key.loady_vm.key)}' | base64 -d)"
-      export LD_SECRET_SSH_ADO_BASE64="$(printf %s '${base64encode(coalesce(var.loady_ssh_ado_base64, " "))}' | base64 -d)"
-      export LD_SECRET_SSH_GITHUB_BASE64="$(printf %s '${base64encode(coalesce(var.loady_ssh_github_base64, " "))}' | base64 -d)"
+      export LD_SECRET_SSH_GIT_BASE64="$(printf %s '${base64encode(coalesce(var.loady_ssh_git_base64, " "))}' | base64 -d)"
     EOT
     destination = "/home/dev/.cache/loady-bootstrap/environment"
   }

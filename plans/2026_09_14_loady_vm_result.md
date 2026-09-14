@@ -46,7 +46,7 @@ Everything below was created by this task unless marked.
 **Terraform** (`infra/loady-vm/`)
 - `versions.tf`, `provider.tf`, `variables.tf`, `main.tf`, `outputs.tf`
 - `.tf-vars` — all three items live: the shared Proxmox and Tailscale ones, and `workstation/loady`
-  (`06e7a977-9e1f-4641-8e36-b4c50096047a`) for the two SSH keys
+  (`06e7a977-9e1f-4641-8e36-b4c50096047a`) for the single git key
 - `bootstrap.sh` — the whole guest
 - `setup.sh` — converge from the Mac
 - `tailscale-api.sh` — tailnet registration cleanup
@@ -76,12 +76,11 @@ In order. Steps 14-19 of the plan.
    `agents/infrastructure/CLAUDE.md` are on `origin/main`, so the originals under
    `~/Repositories/kirill/settings/macos/agents/` are now safe to delete at action 9.
 
-2. **Fill the `workstation/loady` Bitwarden item** — `docs/manual-secrets.md` end to end: the Mac's
-   key to the VM, the passphrase-less copy of `~/.ssh/loady/id_rsa`, and a new GitHub key registered
-   on the GitHub account, stored as the three `ssh_*_base64` fields. The item exists and `.tf-vars`
-   already names it, so nothing else changes once the fields are there.
-   *Verify:* `ssh -i <copy> -o IdentitiesOnly=yes -T git@ssh.dev.azure.com` authenticates with no
-   passphrase prompt.
+2. **Fill the `workstation/loady` Bitwarden item** — one field. Copy `~/.ssh/loady/id_rsa`, strip the
+   passphrase from the copy, store it as `ssh_loady_git_base64`, shred the copy
+   (`docs/manual-secrets.md` has the commands). No new keys and no profile changes.
+   *Verify:* the copy authenticates with no prompt to **both** `git@ssh.dev.azure.com` and
+   `git@github.com`.
 
 3. **`/etc/hosts` and `~/.ssh/config`** on the Mac — `infra/loady-vm/README.md` step 2. Reserve
    `192.168.1.51` on the router, outside the DHCP pool.
@@ -109,6 +108,15 @@ In order. Steps 14-19 of the plan.
 
 ## Notes
 
+- **Three keys became one, on request.** The plan had a dedicated Mac→VM ed25519, the Azure DevOps
+  RSA key, and a new GitHub ed25519. The founder asked to reuse existing keys rather than create any.
+  Verified on 2026-09-14 that `~/.ssh/loady/id_rsa` already authenticates to **both**
+  `ssh.dev.azure.com` and `github.com` (as `kirilloak`), so it is now the single key the bootstrap
+  places for every git remote, and the Mac logs in to the VM with its existing `~/.ssh/id_ed25519`
+  (public half only, so reuse there costs nothing). The Bitwarden item went from three fields to
+  one, `variables.tf` from two key variables to one, and no SSH profile needs a new entry anywhere.
+  The tradeoff, stated in `docs/manual-secrets.md`: one key now reaches both remotes, and its
+  passphrase-less copy lives on the VM.
 - **`vm-start`/`vm-stop` replaced the planned `ld-up --takeover`.** Asked for mid-implementation:
   short commands that switch between the two workstation VMs by name, where starting one stops the
   other. `scripts/vm.sh` does that; `ld-up`/`ld-down` remain as wrappers naming this VM. The

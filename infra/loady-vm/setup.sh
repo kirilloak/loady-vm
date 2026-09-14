@@ -9,7 +9,7 @@
 # thing that would otherwise have been a copy from this Mac. A converge command with no
 # file-copying half also cannot silently overwrite something on the VM.
 #
-# Run it from this root after `ld-tfin`, which exports the register as TF_VAR_loady_ssh_*; run it
+# Run it from this root after `ld-tfin`, which exports the register as TF_VAR_loady_ssh_git_base64; run it
 # from anywhere without, and the bootstrap converges everything except the keys.
 #
 # Usage: infra/loady-vm/setup.sh [ssh-host]      default: loady-vm
@@ -37,15 +37,13 @@ ssh -o ConnectTimeout=10 -o BatchMode=yes "$HOST" true \
 
 echo "==> bootstrap on $HOST"
 register=0
-[[ -z "${TF_VAR_loady_ssh_ado_base64:-}${TF_VAR_loady_ssh_github_base64:-}" ]] || register=1
+[[ -z "${TF_VAR_loady_ssh_git_base64:-}" ]] || register=1
 [[ $register -eq 1 ]] \
-  || echo "    (no TF_VAR_loady_ssh_* in this shell — run 'ld-tfin' in $ROOT_DIR first to carry the keys)"
+  || echo "    (no TF_VAR_loady_ssh_git_base64 in this shell — run 'ld-tfin' in $ROOT_DIR first to carry the keys)"
 
 env_file="$(
-  [[ -z "${TF_VAR_loady_ssh_ado_base64:-}" ]] \
-    || printf 'export LD_SECRET_SSH_ADO_BASE64=%q\n' "$TF_VAR_loady_ssh_ado_base64"
-  [[ -z "${TF_VAR_loady_ssh_github_base64:-}" ]] \
-    || printf 'export LD_SECRET_SSH_GITHUB_BASE64=%q\n' "$TF_VAR_loady_ssh_github_base64"
+  [[ -z "${TF_VAR_loady_ssh_git_base64:-}" ]] \
+    || printf 'export LD_SECRET_SSH_GIT_BASE64=%q\n' "$TF_VAR_loady_ssh_git_base64"
 )"
 
 # The secrets travel as a 0600 file over stdin rather than as process arguments, and are removed

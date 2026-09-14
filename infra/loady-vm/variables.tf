@@ -84,7 +84,7 @@ variable "ubuntu_image_url" {
 }
 
 variable "ssh_public_key" {
-  description = "OpenSSH public key for the dev user; defaults to ~/.ssh/loady/loady-vm/id_ed25519.pub"
+  description = "OpenSSH public key for the dev user; defaults to the Mac's existing main key, ~/.ssh/id_ed25519.pub. Only the public half reaches the VM, so reusing an existing key costs nothing"
   type        = string
   default     = null
 }
@@ -105,20 +105,13 @@ variable "tailscale_tailnet" {
   sensitive = true
 }
 
-# The two keys the VM needs to reach a git remote, single-line base64 of each private key file.
-# ld-tfin loads them from Bitwarden through .tf-vars and the bootstrap writes them onto the VM, so
-# a rebuilt machine clones both repositories without a file being copied by hand. Each is optional:
-# an absent one is reported by the bootstrap, not invented.
+# The one key the VM needs to reach a git remote, as single-line base64 of the private key file.
+# ld-tfin loads it from Bitwarden through .tf-vars and the bootstrap writes it onto the VM, so a
+# rebuilt machine clones both repositories without a file being copied by hand. Optional: an absent
+# one is reported by the bootstrap, not invented.
 
-variable "loady_ssh_ado_base64" {
-  description = "The Azure DevOps key (~/.ssh/loady/id_rsa on the Mac) with its passphrase removed. RSA, because Azure DevOps accepts only RSA for Git over SSH; passphrase-less, because a headless Rider backend and an agent shell cannot answer a prompt"
-  type        = string
-  sensitive   = true
-  default     = null
-}
-
-variable "loady_ssh_github_base64" {
-  description = "The VM's ed25519 key to GitHub, whose only job is cloning this repository onto the VM"
+variable "loady_ssh_git_base64" {
+  description = "The founder's existing Loady key (~/.ssh/loady/id_rsa on the Mac) with its passphrase removed. One key for every git remote this machine uses: it is already registered on both Azure DevOps and GitHub. RSA because Azure DevOps accepts nothing else; passphrase-less because a headless Rider backend and an agent shell cannot answer a prompt"
   type        = string
   sensitive   = true
   default     = null

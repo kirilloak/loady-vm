@@ -37,9 +37,11 @@ release, and the Functions Core Tools come from npm — all three deliberately, 
 
 ## Install, in order
 
-1. **Keys and the Bitwarden item.** `docs/manual-secrets.md`, all of it: the Mac's key to the VM,
-   the passphrase-less copy of the Azure DevOps key, a new GitHub key, and the three fields on the
-   `workstation/loady` Bitwarden item that `.tf-vars` already names.
+1. **The one key, and the Bitwarden item.** `docs/manual-secrets.md`: a passphrase-less copy of the
+   existing `~/.ssh/loady/id_rsa`, stored as `ssh_loady_git_base64` on the `workstation/loady` item
+   that `.tf-vars` already names. No new keys are created and no profile changes: that key already
+   reaches both Azure DevOps and GitHub, and the Mac logs in to the VM with its existing
+   `~/.ssh/id_ed25519`.
 
 2. **The name, on the Mac.** `loady-vm` is the LAN address permanently, in `/etc/hosts`;
    `/etc/hosts` wins over every resolver, so off the LAN use the tailnet name, which the hosts
@@ -49,19 +51,39 @@ release, and the Functions Core Tools come from npm — all three deliberately, 
    grep -q ' loady-vm$' /etc/hosts || echo '192.168.1.51 loady-vm' | sudo tee -a /etc/hosts
    ```
 
-   Then `~/.ssh/config`, so `ssh`, `ld-vm-setup` and Rider agree on how to reach it:
+   Then the SSH config, so `ssh`, `ld-vm-setup` and Rider agree on how to reach it. On this Mac
+   `~/.ssh/config` is a **symlink** into the founder's settings repository
+   (`settings/macos/dotfiles/.sshconfig`), so this is a tracked change there, not a private edit:
 
    ```sshconfig
    Host loady-vm loady-vm-ts
        User dev
-       IdentityFile ~/.ssh/loady/loady-vm/id_ed25519
+       IdentityFile ~/.ssh/id_ed25519
+       IdentitiesOnly yes
        AddKeysToAgent yes
+       UseKeychain yes
        ServerAliveInterval 30
        ServerAliveCountMax 3
 
    Host loady-vm-ts
        HostName loady-vm.tail409f27.ts.net
    ```
+
+   While there, pin the Azure DevOps key by **hostname** as well. The existing `Host loady` alias
+   never matches, because the remote is `git@ssh.dev.azure.com:v3/...`; SSH falls through to
+   `Host *` and offers every key in the agent, which on this Mac means three wrong keys before the
+   right one. Azure DevOps documents that it may reject the request outright instead of trying the
+   next key, so make it deterministic:
+
+   ```sshconfig
+   Host ssh.dev.azure.com
+       IdentityFile ~/.ssh/loady/id_rsa
+       IdentitiesOnly yes
+   ```
+
+   `IdentitiesOnly yes` is what stops the agent's other keys being offered first. The VM does not
+   need this: `bootstrap.sh` binds each checkout to its own key with `core.sshCommand`, which
+   already carries `-o IdentitiesOnly=yes`.
 
 3. **Defaults.** Check `variables.tf` against the live host: `ipv4_cidr` (`192.168.1.51/24`) free
    on the LAN and outside the router's DHCP pool, `ipv4_gateway` right for that LAN, `vm_id` (`201`)

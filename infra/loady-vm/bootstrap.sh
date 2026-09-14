@@ -33,6 +33,9 @@ LOADY_REPO_URL="git@ssh.dev.azure.com:v3/Loady-Logistics/loady/loady-one"
 
 # Azure DevOps publishes one RSA host key for ssh.dev.azure.com. Pinning by fingerprint rather than
 # trusting whatever ssh-keyscan returns is the difference between a known host and a hope.
+# Confirmed 2026-09-14 against the founder's own profile page
+# (dev.azure.com/Loady-Logistics/_usersSettings/keys), which prints the same value; the MD5 form
+# there is 97:70:33:82:fd:29:3a:73:39:af:6a:07:ad:f8:80:49.
 ADO_RSA_FINGERPRINT="SHA256:ohD8VZEXGWo6Ez8GSEJQ9WpafgLFsOfLOtGGQCQo6Og"
 
 bootstrap_started=$SECONDS
@@ -417,12 +420,13 @@ place_secret() {
   chmod 600 "$dest"
 }
 
-ado_key="$HOME/.ssh/loady/ado/id_rsa"
-github_key="$HOME/.ssh/loady/github/id_ed25519"
-place_secret LD_SECRET_SSH_ADO_BASE64 "$ado_key"
-place_secret LD_SECRET_SSH_GITHUB_BASE64 "$github_key"
-ado_ssh_command="ssh -i $ado_key -o IdentitiesOnly=yes"
-github_ssh_command="ssh -i $github_key -o IdentitiesOnly=yes"
+# One key for every git remote this machine talks to. It is the founder's existing Loady key, which
+# is already registered on both Azure DevOps and GitHub, so nothing new is created and no profile
+# changes. IdentitiesOnly matters more than it looks: Azure DevOps accepts the first key offered and
+# may reject the request outright rather than trying the next one.
+git_key="$HOME/.ssh/loady/id_rsa"
+place_secret LD_SECRET_SSH_GIT_BASE64 "$git_key"
+git_ssh_command="ssh -i $git_key -o IdentitiesOnly=yes"
 
 mkdir -p "$HOME/.ssh"
 touch "$HOME/.ssh/known_hosts"
@@ -486,26 +490,19 @@ clone_checkout() {
 }
 
 log "checkouts"
-if [[ -f "$github_key" ]]; then
-  clone_checkout "$VM_REPO_URL" "$VM_REPO" "$github_ssh_command"
-else
+if [[ ! -f "$git_key" ]]; then
   git_todo="$git_todo
-  - no GitHub key in the register, so $VM_REPO could not be cloned and no ld-* command exists here"
-fi
-
-if [[ -f "$ado_key" ]]; then
-  # A passphrase on this key would make every headless push prompt; the register is supposed to
+  - no git key in the register, so neither repository could be cloned and no ld-* command exists
+    here. Run 'ld-tfin' in infra/loady-vm on the Mac and rerun (docs/manual-secrets.md)"
+elif ! ssh-keygen -y -P "" -f "$git_key" >/dev/null 2>&1; then
+  # A passphrase here would make every headless push prompt forever; the register is supposed to
   # hold the passphrase-less copy, so say so plainly rather than hang later.
-  if ssh-keygen -y -P "" -f "$ado_key" >/dev/null 2>&1; then
-    clone_checkout "$LOADY_REPO_URL" "$REPO" "$ado_ssh_command"
-  else
-    git_todo="$git_todo
-  - the Azure DevOps key is passphrase-protected; headless git will prompt. Replace the register
-    field with a passphrase-less copy (docs/manual-secrets.md) and rerun"
-  fi
-else
   git_todo="$git_todo
-  - no Azure DevOps key in the register, so $REPO could not be cloned"
+  - the git key is passphrase-protected; headless git would prompt. Replace the register field with
+    a passphrase-less copy (docs/manual-secrets.md) and rerun"
+else
+  clone_checkout "$VM_REPO_URL" "$VM_REPO" "$git_ssh_command"
+  clone_checkout "$LOADY_REPO_URL" "$REPO" "$git_ssh_command"
 fi
 
 if [[ -d "$REPO/.git" ]]; then
