@@ -126,10 +126,10 @@ retry converge after a download that completed remotely but failed before Terraf
    ld-vm codex
    ```
 
-8. **Run it**: `ld-vm ld-reset`, then in Rider run `be-seeder`, `be-test-data-seeder` and
-   `stack-all`. Open the frontend in the Mac's browser through forwarding and confirm a request
-   reaches a function host through `:7000` — that is the check that proves the Linux-specific
-   fixes.
+8. **Run it**: `ld-vm ld-reset`, which also runs the primary seeder, then in Rider run
+   `be-test-data-seeder` and `stack-all`. Open the frontend in the Mac's browser through forwarding
+   and confirm a request reaches a function host through `:7000` — that is the check that proves
+   the Linux-specific fixes.
 
 9. **Rider**: the procedure in `docs/remote-development.md`, then verify indexing, a build, a test
    run, a breakpoint and a push. Confirm the `.idea` directory Rider creates is

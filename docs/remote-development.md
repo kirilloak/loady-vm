@@ -80,14 +80,15 @@ commits automatically and the disk is the only copy.
 ## Running Loady
 
 ```bash
-ld-reset            # wipe and start the five backing services; --hard also cleans the build
-# Rider: be-seeder, then be-test-data-seeder, then stack-all
+ld-reset            # wipe, start and seed the five backing services; --hard cleans first
+# Rider: be-test-data-seeder, then stack-all
 # Rider: stack-public-apis when the public surface is needed
 ld-cosmos-cert      # refresh Cosmos trust manually; ld-reset already does it
 ```
 
-Docker runs SQL Server, Cosmos DB, Redis, Azurite and the APIM proxy. Rider runs every application:
-the seeders, eleven function hosts and four frontend modes. The shared configurations live in
+Docker runs SQL Server, Cosmos DB, Redis, Azurite and the APIM proxy, and `ld-reset` runs the primary
+seeder after they are ready. Rider runs the eleven function hosts and four frontend modes and keeps
+both seeders available for manual runs. The shared configurations live in
 `dotfiles/rider/run/` and `scripts/link-agent-files.sh` links them into each checkout at
 `backend/.run`. `compose/processes.json` remains the source of truth for the host set and ports.
 

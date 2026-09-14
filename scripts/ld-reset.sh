@@ -1,17 +1,16 @@
 #!/usr/bin/env bash
-# Recreate the local backing services from scratch, and stop there.
+# Recreate and seed the local backing services from scratch.
 #
-# Docker runs the backing services; Rider runs every application. So this brings up SQL Server, the
-# Cosmos emulator, Redis, Azurite and the APIM proxy, waits until the two that need waiting for
-# answer, installs the emulator's fresh certificate, and ends. The build, the seeders and the
-# function hosts are run configurations in Rider now — see dotfiles/rider/run/ and
-# docs/remote-development.md.
+# This brings up SQL Server, the Cosmos emulator, Redis, Azurite and the APIM proxy, waits until the
+# two that need waiting for answer, installs the emulator's fresh certificate, then builds and runs
+# Loady.Seeder. Function hosts, the frontend and optional test-data seeding remain run configurations
+# in Rider — see dotfiles/rider/run/ and docs/remote-development.md.
 #
-# This is the only stack command. Nothing here starts, stops or inspects an application, because
-# a second way to do what Rider does would disagree with it sooner or later.
+# This is the only stack command. Nothing here starts, stops or inspects a long-running application,
+# because a second way to do what Rider does would disagree with it sooner or later.
 #
 # Usage:
-#   ld-reset.sh            recreate the containers and wait for them
+#   ld-reset.sh            recreate the containers, wait for them and run Loady.Seeder
 #   ld-reset.sh --hard     also dotnet clean the solution first
 set -euo pipefail
 LD_PROG=ld-reset
@@ -19,7 +18,7 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=scripts/lib.sh
 source "$HERE/lib.sh"
 
-ld_need docker jq
+ld_need docker jq dotnet
 
 REPO="$(ld_repo)"
 HARD=0
@@ -93,4 +92,17 @@ ld_wait_for "cosmosdb" 600 curl -fsSk https://localhost:8081/_explorer/emulator.
 # the trust store has to follow it. Idempotent: a no-op when it is already the trusted one.
 "$HERE/cosmos-cert.sh"
 
-ld_log "containers ready. In Rider: 'be-seeder', then 'be-test-data-seeder', then 'stack-all'."
+SEEDER_DIR="$REPO/backend/src/Seeder/Loady.Seeder"
+SEEDER_OUTPUT="$SEEDER_DIR/bin/Debug/net10.0"
+
+ld_log "building Loady.Seeder"
+dotnet build "$SEEDER_DIR/Loady.Seeder.csproj" --nologo --verbosity minimal
+
+ld_log "seeding"
+(
+  cd "$SEEDER_OUTPUT"
+  AZURE_FUNCTIONS_ENVIRONMENT=Localhost EnvironmentName=Localhost \
+    dotnet Loady.Seeder.dll -IncludeSeeders -IncludeMigrations -IncludeSqlMigrations -u
+)
+
+ld_log "containers ready and seeded. In Rider: 'be-test-data-seeder', then 'stack-all'."

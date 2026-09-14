@@ -54,10 +54,9 @@ ld-tfd()      { ld_run_with_bw_session scripts/rebuild-loady-vm.zsh "$@"; }
 # ---------------------------------------------------------------------------------------------
 # The backing services, on the VM
 # ---------------------------------------------------------------------------------------------
-# Docker runs the backing services; Rider runs every application. So there is one command here and
-# no second way to start, stop or inspect a function host, the frontend or a seeder — those are run
-# configurations in dotfiles/rider/run/, and a shell command that did the same thing would disagree
-# with Rider about what is running.
+# Docker runs the backing services, and ld-reset runs the primary seeder after recreating them.
+# Rider starts and inspects every long-running application and provides the optional test-data
+# seeder; those are run configurations in dotfiles/rider/run/.
 ld-reset()   { ld_run scripts/ld-reset.sh "$@"; }
 # The Cosmos emulator's self-signed certificate, into this machine's trust store. ld-reset does
 # this itself; run it by hand after an emulator reset done another way, or with --print to copy

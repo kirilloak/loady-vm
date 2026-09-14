@@ -19,6 +19,7 @@ Recorded as it happens. `not run` means not run, not "assumed fine".
 | Forwarded-port keys against the documented service and host set | Passed; 20 unique ports |
 | Tracked configuration secret scan | Passed; no B2C client secret, SendGrid key or non-local password found |
 | `dotnet build Loady.slnx --nologo --verbosity minimal` | Passed; 0 warnings and 0 errors |
+| `dotnet build Loady.Seeder.csproj --nologo --verbosity minimal` | Passed after adding automatic primary seeding to `ld-reset`; 0 warnings and 0 errors |
 | `shellcheck scripts/*.sh infra/bootstrap.sh infra/run-bootstrap.sh infra/setup.sh` | Passed |
 | `bash -n scripts/*.sh infra/bootstrap.sh infra/run-bootstrap.sh infra/setup.sh` | Passed |
 | `zsh -n scripts/loady-shell.zsh` | Passed |
@@ -36,7 +37,7 @@ Recorded as it happens. `not run` means not run, not "assumed fine".
 | `dotfiles/rider/run/*.run.xml` | Added 11 local hosts, the SSO host, four frontend modes, two seeders and three compounds (21 files) |
 | `dotfiles/rider/forwardedPorts.xml` | Added the complete 20-port forwarding set |
 | `scripts/link-agent-files.sh` | Links `backend/.run`, adds a local exclusion and asserts the checkout stays clean |
-| `scripts/ld-reset.sh` | Reduced the stack command to backing-service reset, readiness and Cosmos trust |
+| `scripts/ld-reset.sh` | Recreates the backing services, installs Cosmos trust, then builds and runs the primary seeder |
 | `scripts/ld-dev.sh` | Removed the retired application process manager |
 | `scripts/loady-shell.zsh` | Removed the eight retired application commands and retained `ld-reset` |
 | `scripts/ld-stream.sh`, `scripts/slot.sh`, `scripts/lib.sh`, `scripts/cosmos-cert.sh` | Updated worktree, slot and command behaviour/comments for Rider ownership |
@@ -54,7 +55,7 @@ Recorded as it happens. `not run` means not run, not "assumed fine".
   `/usr/lib/node_modules/azure-functions-core-tools/bin/func`.
 - Re-run `stack-all` from cold three times; if the historical concurrent-start race appears,
   start the hosts individually in manifest order and revise the compounds.
-- Run `be-seeder`, `be-test-data-seeder`, `stack-be-fe`, `stack-all`, `stack-public-apis`,
+- Run `ld-reset`, then `be-test-data-seeder`, `stack-be-fe`, `stack-all`, `stack-public-apis`,
   `fe-company-admin` and `fe-dev`; confirm the frontend request path and a bound breakpoint.
 - Run `az login --use-device-code`, then test `be-backend-sso` with `fe-sso` and confirm the seeded
   data is local.
