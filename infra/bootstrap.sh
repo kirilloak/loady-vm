@@ -185,8 +185,6 @@ apt_repo nodesource https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \
   "deb [arch=amd64 signed-by=$KEYRINGS/nodesource.gpg] https://deb.nodesource.com/node_${NODE_MAJOR}.x nodistro main"
 apt_repo azure-cli https://packages.microsoft.com/keys/microsoft.asc \
   "deb [arch=amd64 signed-by=$KEYRINGS/azure-cli.gpg] https://packages.microsoft.com/repos/azure-cli/ $CODENAME main"
-apt_repo tailscale "https://pkgs.tailscale.com/stable/ubuntu/${CODENAME}.noarmor.gpg" \
-  "deb [signed-by=$KEYRINGS/tailscale.gpg] https://pkgs.tailscale.com/stable/ubuntu $CODENAME main"
 # Ubuntu freezes git at release; the maintainers' PPA tracks upstream stable for every release.
 apt_repo git-core "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0xF911AB184317630C59970973E363C90F8F1B6217" \
   "deb [arch=amd64 signed-by=$KEYRINGS/git-core.gpg] https://ppa.launchpadcontent.net/git-core/ppa/ubuntu $CODENAME main"
@@ -206,7 +204,7 @@ apt install -y --no-install-recommends \
   git make build-essential python3 \
   unzip zip tmux htop lsof zsh cron \
   docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin \
-  nodejs azure-cli tailscale
+  nodejs azure-cli
 
 # --------------------------------------------------------------------------------------------------
 # Docker Engine
@@ -324,20 +322,6 @@ if [[ ! -x "$HOME/.local/bin/claude" ]] || ! run_with_progress "Claude update" "
   download "Claude installer" https://claude.ai/install.sh /tmp/claude-install.sh
   run_with_progress "Claude install" bash /tmp/claude-install.sh
   rm -f /tmp/claude-install.sh
-fi
-
-# --------------------------------------------------------------------------------------------------
-# Tailnet: the VM is one of the founder's devices. Tailscale SSH is the second door — a lost or
-# rotated loady-vm key is then `tailscale ssh dev@loady-vm` and a new authorized_keys, not a rebuild.
-# --------------------------------------------------------------------------------------------------
-log "tailscale"
-sudo systemctl enable --now tailscaled >/dev/null
-if [[ "$(tailscale status --json 2>/dev/null | jq -r .BackendState)" == "Running" ]]; then
-  sudo tailscale set --ssh
-else
-  [[ -n "${TS_AUTHKEY:-}" ]] || die "the VM is not on the tailnet and no Tailscale auth key was provided"
-  sudo tailscale up --auth-key="$TS_AUTHKEY" --hostname="$(hostname)" --ssh \
-    || die "could not join the tailnet"
 fi
 
 # --------------------------------------------------------------------------------------------------
@@ -520,6 +504,12 @@ if [[ -d "$VM_REPO/.git" ]]; then
   fi
 fi
 
+log "loady commands"
+for command_name in ld-reset ld-start ld-stop ld-status ld-build ld-fe ld-agents; do
+  zsh -lic "whence -w $command_name" 2>/dev/null | grep -qx "$command_name: function" \
+    || die "$command_name is not available in the VM login shell"
+done
+
 if [[ -d "$REPO/.git" ]]; then
   if [[ -n "$(git -C "$REPO" status --porcelain)" ]]; then
     log "checkout has uncommitted work; leaving it exactly as it is"
@@ -640,7 +630,6 @@ lan_cidr="$(ip -o -4 route show dev "$lan_iface" scope link | awk '!found {print
 sudo ufw default deny incoming >/dev/null
 sudo ufw default allow outgoing >/dev/null
 sudo ufw allow from "$lan_cidr" to any port 22 proto tcp comment "ssh from LAN" >/dev/null
-sudo ufw allow in on tailscale0 comment "tailnet" >/dev/null
 
 # The second half of the host.docker.internal fix. nginx in the apim container calls back to the
 # function hosts on the VM's bridge address, and that traffic arrives inbound on a br-* interface,
@@ -692,7 +681,6 @@ printf '  %-12s %s\n' \
   claude "$("$HOME/.local/bin/claude" --version 2>/dev/null | head -n1 || echo installed)" \
   codex "$(codex --version 2>/dev/null | head -n1 || echo installed)" \
   bw "$(bw --version 2>/dev/null)" \
-  tailscale "$(tailscale version | head -n1) $(tailscale status --json 2>/dev/null | jq -r .BackendState)" \
   ufw "$(sudo ufw status | head -n1)"
 
 echo

@@ -17,8 +17,8 @@ build. The VM trades guest-side hardening for build throughput — `mitigations=
 `/tmp` on tmpfs, no guest I/O scheduler, raised open-file limits — which is deliberate: only the
 founder's own code runs in this guest.
 
-State is local (`terraform.tfstate` here, gitignored). It holds the Proxmox password and a Tailscale
-key in clear, so it is never committed; `docs/manual-secrets.md` covers losing it.
+State is local (`terraform.tfstate` here, gitignored). It holds the Proxmox password in clear, so it
+is never committed; `docs/manual-secrets.md` covers losing it.
 
 ## The image
 
@@ -47,9 +47,8 @@ retry converge after a download that completed remotely but failed before Terraf
    reaches both Azure DevOps and GitHub, and the Mac logs in to the VM with its existing
    `~/.ssh/id_ed25519`.
 
-2. **The name, on the Mac.** `loady-vm` is the LAN address permanently, in `/etc/hosts`;
-   `/etc/hosts` wins over every resolver, so off the LAN use the tailnet name, which the hosts
-   entry does not shadow.
+2. **The name, on the Mac.** `loady-vm` is the LAN address permanently, in `/etc/hosts`. The VM is
+   reachable on the LAN only.
 
    ```bash
    grep -q ' loady-vm$' /etc/hosts || echo '192.168.1.51 loady-vm' | sudo tee -a /etc/hosts
@@ -60,7 +59,7 @@ retry converge after a download that completed remotely but failed before Terraf
    (`settings/macos/dotfiles/.sshconfig`), so this is a tracked change there, not a private edit:
 
    ```sshconfig
-   Host loady-vm loady-vm-ts
+   Host loady-vm
        User dev
        IdentityFile ~/.ssh/id_ed25519
        IdentitiesOnly yes
@@ -68,9 +67,6 @@ retry converge after a download that completed remotely but failed before Terraf
        UseKeychain yes
        ServerAliveInterval 30
        ServerAliveCountMax 3
-
-   Host loady-vm-ts
-       HostName loady-vm.tail409f27.ts.net
    ```
 
    While there, pin the Azure DevOps key by **hostname** as well. The existing `Host loady` alias
@@ -109,17 +105,15 @@ retry converge after a download that completed remotely but failed before Terraf
    ```
 
    `ld-tfd` loads the Bitwarden register, initializes Terraform, removes any partial prior machine,
-   clears its stale SSH host keys, applies with auto-approval, waits for SSH, joins the VM to
-   Tailscale, runs the bootstrap with the Git key, restores and builds the C# solution, installs
+   clears its stale SSH host keys, applies with auto-approval, waits for SSH, runs the bootstrap
+   with the Git key, restores and builds the C# solution, installs
    frontend dependencies, pulls every Compose image, and waits for any required Ubuntu reboot to
    finish. Any step failing stops the command; fix the cause and run `ld-tfd` again. It refuses to
    destroy reachable uncommitted or unpushed work unless `--force` is explicit.
 
 6. **Reserve the address** on the router, outside the DHCP pool.
 
-7. **Tailscale console**, only if device approval is on: approve `loady-vm`.
-
-8. **Sign in on the VM.** Each of these is a browser or device flow that cannot be handed over as a
+7. **Sign in on the VM.** Each of these is a browser or device flow that cannot be handed over as a
    token, so they are run through `ld-vm` from the Mac rather than by logging in:
 
    ```bash
@@ -129,13 +123,13 @@ retry converge after a download that completed remotely but failed before Terraf
    ld-vm codex
    ```
 
-9. **Run it**: `ld-vm ld-reset`, `ld-vm ld-start`, `ld-vm ld-fe`. Then open the frontend in the
+8. **Run it**: `ld-vm ld-reset`, `ld-vm ld-start`, `ld-vm ld-fe`. Then open the frontend in the
    Mac's browser through forwarding and confirm a request reaches a function host through `:7000` —
    that is the check that proves the Linux-specific fixes.
 
-10. **Rider**: the procedure in `docs/remote-development.md`, then verify indexing, a build, a test
-    run, a breakpoint and a push. Confirm the `.idea` directory Rider creates is
-    `backend/.idea/.idea.Loady/.idea`; if it is not, correct `RIDER_DIR` in `dotfiles/sync.sh`.
+9. **Rider**: the procedure in `docs/remote-development.md`, then verify indexing, a build, a test
+   run, a breakpoint and a push. Confirm the `.idea` directory Rider creates is
+   `backend/.idea/.idea.Loady/.idea`; if it is not, correct `RIDER_DIR` in `dotfiles/sync.sh`.
 
 ## Operate
 
@@ -160,9 +154,8 @@ terraform output bootstrap_log
 
 ## Lost access
 
-The bootstrap joins the tailnet with `--ssh`, so a lost or rotated key is `tailscale ssh
-dev@loady-vm` from the Mac and a new `authorized_keys`, not a rebuild. Both doors gone at once is a
-rebuild: the `dev` user has no password, so the Proxmox console cannot log in.
+The Mac's `~/.ssh/id_ed25519` is the only door, so a lost or rotated key is a rebuild: the `dev` user
+has no password, so the Proxmox console cannot log in either.
 
 ## Rebuild
 

@@ -1,6 +1,5 @@
-# Terraform working state. The state file holds the Proxmox password and a Tailscale
-# auth key in clear; it is never committed. docs/manual-secrets.md owns what to do
-# when it is lost.
+# Terraform working state. The state file holds the Proxmox password in clear; it is
+# never committed. docs/manual-secrets.md owns what to do when it is lost.
 .terraform/
 *.tfstate
 *.tfstate.*

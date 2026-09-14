@@ -7,9 +7,8 @@ locals {
   ssh_public_key = var.ssh_public_key != null ? var.ssh_public_key : trimspace(
     file(pathexpand("~/.ssh/id_ed25519.pub"))
   )
-  ipv4_address       = split("/", var.ipv4_cidr)[0]
-  bootstrap_path     = "${path.module}/bootstrap.sh"
-  tailscale_api_path = "${path.module}/tailscale-api.sh"
+  ipv4_address   = split("/", var.ipv4_cidr)[0]
+  bootstrap_path = "${path.module}/bootstrap.sh"
 }
 
 resource "proxmox_download_file" "ubuntu_cloud_image" {
@@ -110,54 +109,6 @@ resource "proxmox_virtual_environment_vm" "loady_vm" {
     # The image is consumed once at creation; a newer download must not replace the disk.
     ignore_changes = [disk[0].file_id]
   }
-
-  # Orders the Tailscale cleanup after the VM on destroy; see terraform_data.tailscale_device.
-  depends_on = [terraform_data.tailscale_device]
-}
-
-# One single-use, short-lived key so the bootstrap joins the tailnet without a browser. It is the
-# founder's key, so the VM lands as one of the founder's devices; it is minted minutes before it is
-# used and dead an hour later. `always` re-mints it once spent, so every apply carries a live key
-# and the bootstrap can rejoin after a node-key expiry or a rebuild without a browser either.
-resource "tailscale_tailnet_key" "loady_vm" {
-  reusable            = false
-  ephemeral           = false
-  preauthorized       = true
-  expiry              = 3600
-  description         = "loady-vm ${var.vm_name}"
-  recreate_if_invalid = "always"
-
-  lifecycle {
-    replace_triggered_by = [proxmox_virtual_environment_vm.loady_vm.id]
-  }
-}
-
-# `tailscale up` creates a member device outside Terraform's resource model. Delete exact-hostname
-# matches before the VM exists to clean older residue, and again on destroy so a disposable VM does
-# not leave a stale device behind and its replacement gets the canonical name. The VM depends on
-# this resource rather than the reverse, so on destroy the device is removed only after the VM has
-# been shut down and deleted: a node still online when its registration is deleted re-registers,
-# which is how the next one ends up named loady-vm-1 and every `ssh loady-vm-ts` reaches nothing.
-resource "terraform_data" "tailscale_device" {
-  input = {
-    hostname    = var.vm_name
-    script_path = abspath(local.tailscale_api_path)
-  }
-
-  provisioner "local-exec" {
-    command = self.input.script_path
-    environment = {
-      LD_TAILSCALE_HOSTNAME = self.input.hostname
-    }
-  }
-
-  provisioner "local-exec" {
-    when    = destroy
-    command = self.input.script_path
-    environment = {
-      LD_TAILSCALE_HOSTNAME = self.input.hostname
-    }
-  }
 }
 
 # Runs the bootstrap on every apply: the script converges and upgrades, so an apply is also the
@@ -192,7 +143,6 @@ resource "terraform_data" "bootstrap" {
   # material intact through the template.
   provisioner "file" {
     content     = <<-EOT
-      export TS_AUTHKEY="$(printf %s '${base64encode(tailscale_tailnet_key.loady_vm.key)}' | base64 -d)"
       export LD_SECRET_SSH_GIT_BASE64="$(printf %s '${base64encode(var.loady_ssh_git_base64)}' | base64 -d)"
     EOT
     destination = "/home/dev/.cache/loady-bootstrap/environment"
@@ -207,5 +157,5 @@ resource "terraform_data" "bootstrap" {
     ]
   }
 
-  depends_on = [proxmox_virtual_environment_vm.loady_vm, terraform_data.tailscale_device]
+  depends_on = [proxmox_virtual_environment_vm.loady_vm]
 }

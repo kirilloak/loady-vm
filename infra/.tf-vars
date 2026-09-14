@@ -7,10 +7,6 @@
 # dev-infra/dev-proxmox — root@pam on the Proxmox API
 TF_VAR_virtual_environment_password 96ed5a9b-7d25-4889-a8f2-b3900126fed1
 
-# prod-infra/prod-tailscale — the founder's personal API key and tailnet
-TF_VAR_tailscale_api_key c38d5c50-189f-4ed0-9bd7-b3b201685236 field api_key
-TF_VAR_tailscale_tailnet c38d5c50-189f-4ed0-9bd7-b3b201685236 field tailnet
-
 # workstation/loady — the founder's existing Loady key, passphrase removed, for every git remote
 # the VM uses. See docs/manual-secrets.md.
 TF_VAR_loady_ssh_git_base64 06e7a977-9e1f-4641-8e36-b4c50096047a field ssh_loady_git_base64

@@ -95,16 +95,6 @@ variable "ssh_private_key_file" {
   default     = null
 }
 
-variable "tailscale_api_key" {
-  type      = string
-  sensitive = true
-}
-
-variable "tailscale_tailnet" {
-  type      = string
-  sensitive = true
-}
-
 # The one key the VM needs to reach a git remote, as single-line base64 of the private key file.
 # ld-tfin loads it from Bitwarden through .tf-vars and the bootstrap writes it onto the VM, so a
 # rebuilt machine clones both repositories without a file being copied by hand. It is required

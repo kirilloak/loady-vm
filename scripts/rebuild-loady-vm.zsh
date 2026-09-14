@@ -52,10 +52,8 @@ terraform destroy -auto-approve
 # The replacement answers on the same name and address with new host keys; drop the old ones before
 # Terraform's post step connects to it.
 ipv4="$(sed -nE 's/^ *default *= *"([0-9.]+)\/[0-9]+"/\1/p' variables.tf | head -n 1)"
-tailscale_host="$(ssh -G loady-vm-ts 2>/dev/null | awk '$1 == "hostname" { print $2; exit }')"
 ssh-keygen -R "$host" >/dev/null 2>&1 || true
 [[ -z "$ipv4" ]] || ssh-keygen -R "$ipv4" >/dev/null 2>&1 || true
-[[ -z "$tailscale_host" ]] || ssh-keygen -R "$tailscale_host" >/dev/null 2>&1 || true
 
 print -- "==> Creating $host"
 terraform apply -auto-approve

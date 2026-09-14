@@ -3,8 +3,7 @@
 The Mac is a thin client. The development workstation is `loady-vm`, an Ubuntu Server VM on the
 founder's Proxmox host: the `loady-one` checkout, Rider's backend, the .NET and Node toolchains,
 Docker, the local stack and the coding agents all live and run there. The Mac renders the IDE, the
-browser and the terminal, and reaches the VM over SSH — on the LAN at home, over Tailscale
-elsewhere.
+browser and the terminal, and reaches the VM over SSH on the LAN.
 
 Why: the company laptop does not have the CPU or memory to build this solution, the VM is Linux
 amd64 like the deployment targets, and Docker is native rather than a VM inside macOS. Remote IDE
@@ -25,7 +24,7 @@ work is latency-bound rather than bandwidth-bound, so wired 1 GbE on the LAN is 
 | Rider backend, ReSharper, indexing | JetBrains Client rendering |
 | `dotnet restore`, `build`, `test`, the debugger | keyboard, clipboard, notifications |
 | Docker, the containers, the function hosts | browser, through forwarded ports |
-| the frontend dev server | Tailscale, Bitwarden |
+| the frontend dev server | Bitwarden |
 | `claude`, `codex`, git, every `ld-*` command | `ssh`, `tmux attach`, `vm-start`/`vm-stop`, the Terraform root |
 
 ## One VM at a time
@@ -174,11 +173,10 @@ path, so an SSH failure is fixed in the VM runbook rather than in the IDE.
 ## Access and boundaries
 
 - **SSH** is keys only, no root, no passwords. The login is `dev@loady-vm`.
-- **Two doors, never zero.** Tailscale SSH is on as well, so a lost or rotated key is
-  `tailscale ssh dev@loady-vm` and a new `authorized_keys`, not a rebuild. Both gone at once is a
-  rebuild: the `dev` user has no password for the Proxmox console, on purpose.
-- **Firewall.** ufw denies incoming except SSH from the LAN subnet, anything on `tailscale0`, and
-  the Docker bridge to the function-host ports. No router port-forward to the VM, ever.
+- **One door.** The Mac's key is the only way in: a lost or rotated key is a rebuild, because the
+  `dev` user has no password for the Proxmox console, on purpose.
+- **Firewall.** ufw denies incoming except SSH from the LAN subnet and the Docker bridge to the
+  function-host ports. No router port-forward to the VM, ever.
 - **Nothing listens on the LAN except sshd.**
 - **Git is manual.** No script and no agent commits, pushes, merges or opens a pull request.
   `AGENTS.md` rule 2, enforced by the deny list in `dotfiles/ai/claude/settings.json`.
