@@ -67,6 +67,8 @@ Everything below was created by this task unless marked.
 **Outside this repository**
 - `~/loady-one/backend/CLAUDE.md`, `~/loady-one/backend/AGENTS.md` — symlinks into this repository
 - `~/loady-one/.git/info/exclude` — three entries appended; local only, never pushed
+- `~/Repositories/kirill/settings/macos/dotfiles/.zprofile`, `.zshrc` — source
+  `~/loady-vm/scripts/loady-shell.zsh`; the four obsolete Loady aliases were removed
 
 ## Manual actions
 
@@ -85,9 +87,9 @@ In order. Steps 14-19 of the plan.
 3. **`/etc/hosts` and `~/.ssh/config`** on the Mac — `infra/README.md` step 2. Reserve
    `192.168.1.51` on the router, outside the DHCP pool.
 
-4. **Source the shell file** from `~/.zprofile` and `~/.zshrc`, and delete the four dead `ld-*`
-   aliases in `~/.zshrc` (lines 81-84: they point at `~/Repositories/loady/loady-one`, which no
-   longer exists).
+4. ~~**Source the shell file** from `~/.zprofile` and `~/.zshrc`, and delete the four dead `ld-*`
+   aliases in `~/.zshrc`.~~ Done in the tracked settings repository; a fresh login shell resolves
+   all Loady commands as functions.
 
 5. **Confirm `192.168.1.51` and `vm_id` 201 are free** on the live host, then run `ld-tfd` from any
    directory. It loads the register, initializes Terraform, and creates the fully bootstrapped VM.
@@ -113,7 +115,9 @@ In order. Steps 14-19 of the plan.
   image, requires the Git key, and fails unless the C# restore/build, frontend install, and Compose
   image pull all succeed. Following Costfluent's `cf-tfd` pattern, `ld-tfd` opens the Bitwarden
   session before entering the rebuild script, clears LAN and Tailscale host keys, and waits for the
-  post-bootstrap reboot to finish, so creation and rebuilding require only that command.
+  post-bootstrap reboot to finish, so creation and rebuilding require only that command. The
+  bootstrap also verifies the VM login shell exposes the operational `ld-*` functions, including
+  `ld-reset`, before it can succeed.
 - **Three keys became one, on request.** The plan had a dedicated Mac→VM ed25519, the Azure DevOps
   RSA key, and a new GitHub ed25519. The founder asked to reuse existing keys rather than create any.
   Verified on 2026-09-14 that `~/.ssh/loady/id_rsa` already authenticates to **both**
