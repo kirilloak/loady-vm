@@ -31,9 +31,9 @@ and a missing codename fails the run on exactly the image it targets. **Checked 
 curl -sS https://packages.microsoft.com/repos/azure-cli/dists/ | grep '<codename>/'
 ```
 
-Nothing else is codename-gated: PowerShell is not installed at all, `sqlcmd` comes from a GitHub
-release, and the Functions Core Tools come from npm — all three deliberately, because the
-`packages.microsoft.com/.../prod` repository lags new Ubuntu releases badly.
+`sqlcmd` comes from `packages.microsoft.com/ubuntu/<release>/prod` as `mssql-tools18`, which is
+codename-gated the same way and publishes for this one (checked 2026-09-14). PowerShell is not
+installed at all, and the Functions Core Tools come from npm.
 
 If that filename already exists in Proxmox but is absent from this root's state, the first apply
 replaces that one unmanaged file from the configured URL and takes ownership of it. This makes a
@@ -44,8 +44,8 @@ retry converge after a download that completed remotely but failed before Terraf
 1. **The one key, and the Bitwarden item.** `docs/manual-secrets.md`: a passphrase-less copy of the
    existing `~/.ssh/loady/id_rsa`, stored as `ssh_loady_git_base64` on the `workstation/loady` item
    that `.tf-vars` already names. No new keys are created and no profile changes: that key already
-   reaches both Azure DevOps and GitHub, and the Mac logs in to the VM with its existing
-   `~/.ssh/id_ed25519`.
+   reaches Azure DevOps, the only git service the VM talks to, and the Mac logs in to the VM with
+   its existing `~/.ssh/id_ed25519`.
 
 2. **The name, on the Mac.** `loady-vm` is the LAN address permanently, in `/etc/hosts`. The VM is
    reachable on the LAN only.
@@ -104,12 +104,15 @@ retry converge after a download that completed remotely but failed before Terraf
    ld-tfd
    ```
 
-   `ld-tfd` loads the Bitwarden register, initializes Terraform, removes any partial prior machine,
-   clears its stale SSH host keys, applies with auto-approval, waits for SSH, runs the bootstrap
-   with the Git key, restores and builds the C# solution, installs
-   frontend dependencies, pulls every Compose image, and waits for any required Ubuntu reboot to
-   finish. Any step failing stops the command; fix the cause and run `ld-tfd` again. It refuses to
-   destroy reachable uncommitted or unpushed work unless `--force` is explicit.
+   `ld-tfd` loads the Bitwarden register, initializes Terraform, applies with auto-approval, waits
+   for SSH, sends this repository to the VM, runs the bootstrap with the Git key, restores and
+   builds the C# solution, installs frontend dependencies, pulls every Compose image, and waits for
+   any required Ubuntu reboot to finish. Any step failing stops the command; fix the cause and run
+   it again.
+
+   With a VM already there it converges that one rather than replacing it, which is also how an
+   upgrade is run. `ld-tfd --rebuild` destroys it first and builds it again from the cloud image,
+   and refuses while reachable uncommitted or unpushed work exists unless `--force` is explicit.
 
 6. **Reserve the address** on the router, outside the DHCP pool.
 
@@ -134,14 +137,15 @@ retry converge after a download that completed remotely but failed before Terraf
 ## Operate
 
 - **Anything on the VM without logging in**: `ld-vm <command>` runs it in the VM's login shell from
-  the checkout — `ld-vm ld-status`, `ld-vm 'ld-start --public'`, `ld-vm 'cd ~/loady-vm && git status'`.
+  the checkout — `ld-vm ld-status`, `ld-vm 'ld-start --public'`, `ld-vm 'git status'`.
 - **Power**: `vm-start loady`, `vm-stop loady`, `vm-status`. Starting one workstation VM stops the
   other.
-- **Converge or upgrade**: `ld-tfin && ld-vm-setup` from here (the SSH keys travel), `ld-vm-setup`
-  from anywhere (everything else), or `terraform apply` (the same post step). Every run upgrades
-  packages within the configured Ubuntu release, Docker, the SDKs, the CLIs and the agents,
-  rewrites only what differs, and reboots seconds later when Ubuntu requires it.
-- **Rotate a key**: update the field in Bitwarden, then `ld-tfin && ld-vm-setup`.
+- **Converge or upgrade**: `ld-vm-setup` from anywhere, or `ld-tfd`, which does the same through
+  Terraform. Both load the Bitwarden register themselves, so the keys travel without `ld-tfin` in
+  front. Every run upgrades packages within the configured Ubuntu release, Docker, the SDKs, the
+  CLIs and the agents, rewrites only what differs, and reboots seconds later when Ubuntu requires
+  it.
+- **Rotate a key**: update the field in Bitwarden, then `ld-vm-setup`.
 - **Change what the VM has**: edit `bootstrap.sh`, then either command above.
 
 Each bootstrap runs on the VM as the systemd unit `loady-bootstrap`, started by `run-bootstrap.sh`,
@@ -165,11 +169,12 @@ terraform output bootstrap_log
 The Mac's `~/.ssh/id_ed25519` is the only door, so a lost or rotated key is a rebuild: the `dev` user
 has no password, so the Proxmox console cannot log in either.
 
-## Rebuild
+## Converge and rebuild
 
 ```bash
-ld-tfd            # refuses while the VM holds uncommitted or unpushed work
-ld-tfd --force    # discards it
+ld-tfd                      # converge the VM that is there, or build the first one
+ld-tfd --rebuild            # destroy and build again; refuses while the VM holds unpushed work
+ld-tfd --rebuild --force    # discards it
 ```
 
 `scripts/rebuild-loady-vm.zsh` checks the checkout and every worktree, runs `ld-tfin`, destroys,

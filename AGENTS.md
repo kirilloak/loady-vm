@@ -30,10 +30,13 @@ Every decision in this repository follows from these. They are not preferences.
    The single exception is `git worktree add` creating a local branch (`ld-stn`). It publishes
    nothing.
 
-3. **Azure DevOps over SSH. No GitHub CLI.** Loady's remote is `git@ssh.dev.azure.com` and is
-   reached only over SSH with the key the bootstrap places. `gh` is not installed and must not be
-   installed or called; GitHub exists here only as the SSH remote of this repository itself. No
-   Azure DevOps web UI or `az repos` automation either — pull requests are the founder's, by hand.
+3. **The VM holds Loady resources only, and reaches Azure DevOps only.** `~/loady-one` over
+   `git@ssh.dev.azure.com` is the single checkout and the single git remote on that machine,
+   reached with the key the bootstrap places. Nothing on the VM touches GitHub: not a remote, not a
+   release download, not `gh`, which is not installed and must not be. This repository keeps its
+   GitHub remote, but only on the Mac, where it is edited, committed and pushed; the VM receives it
+   as files from `infra/send-tree.sh`. No Azure DevOps web UI or `az repos` automation either —
+   pull requests are the founder's, by hand.
 
 4. **The Mac is a client, plus a cold fallback.** Daily work happens on the VM. The Mac runs the
    Rider client, a browser, `ssh`, and the Terraform root in `infra`. Its `~/loady-one`
@@ -41,9 +44,14 @@ Every decision in this repository follows from these. They are not preferences.
    fallback session starts with a fetch and ends with a push.
 
 5. **The VM is disposable — its working tree is not.** Nothing on the VM's disk is authoritative
-   except uncommitted and unpushed Git work, which under rule 2 is the normal state. Nothing here
-   ever stashes, resets, cleans or force-checks-out a dirty tree. `ld-tfd` refuses to destroy the
-   VM while any such work exists.
+   except uncommitted and unpushed Git work in `~/loady-one`, which under rule 2 is the normal
+   state. Nothing here ever stashes, resets, cleans or force-checks-out a dirty tree. `ld-tfd`
+   converges the VM that is there rather than replacing it, and `ld-tfd --rebuild` refuses to
+   destroy it while any such work exists.
+
+   `~/loady-vm` on the VM is the exception, and is not a checkout at all: it is a copy the Mac
+   sends, replaced on every converge. Edit this setup on the Mac. An edit made to that copy has no
+   remote to reach and is gone at the next `ld-vm-setup`.
 
 ## Where knowledge lives
 
@@ -54,6 +62,7 @@ One fact, one file. Two files stating the same thing will disagree eventually.
 | The VM: sizing, address, image, lifecycle | `infra/*.tf` and `infra/README.md` |
 | What is installed and configured inside the VM | `infra/bootstrap.sh` |
 | Running the bootstrap detached, and attaching to it | `infra/run-bootstrap.sh` |
+| Sending this repository to the VM | `infra/send-tree.sh` |
 | Converging the VM from the Mac | `infra/setup.sh` |
 | Architecture, Rider, ports, boundaries, streams | `docs/remote-development.md` |
 | The Bitwarden register and recovery | `docs/manual-secrets.md` |

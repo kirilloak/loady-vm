@@ -23,12 +23,9 @@ REPO="$HOME/loady-one"
 VM_REPO="$HOME/loady-vm"
 WORKTREES="$HOME/loady-worktrees"
 GIT_USER_NAME="Kirill Starodubtsev"
-# Two identities, deliberately. The work address signs commits in the team repository only; setting
-# it globally would sign the private repository's commits with it too.
-GIT_WORK_EMAIL="kirill.starodubtsev@loady.com"
-GIT_PERSONAL_EMAIL="79607671+kirilloak@users.noreply.github.com"
+# One address on this machine, in every checkout.
+GIT_EMAIL="kirill.starodubtsev@loady.com"
 
-VM_REPO_URL="git@github.com:kirilloak/loady-vm.git"
 LOADY_REPO_URL="git@ssh.dev.azure.com:v3/Loady-Logistics/loady/loady-one"
 
 # Azure DevOps publishes one RSA host key for ssh.dev.azure.com. Pinning by fingerprint rather than
@@ -79,11 +76,6 @@ download() {
   local label="$1" url="$2" dest="$3"
   curl -fsSL --connect-timeout 10 --max-time 900 --retry 3 --retry-all-errors "$url" -o "$dest" \
     || die "could not download $label from $url"
-}
-
-latest_github_tag() {
-  curl -fsSL --connect-timeout 10 --max-time 60 --retry 2 \
-    "https://api.github.com/repos/$1/releases/latest" | jq -r '.tag_name | ltrimstr("v")'
 }
 
 # A package upgrade restarts the service it replaces, and openssh-server's restart takes down the
@@ -157,7 +149,9 @@ apt() {
   if [[ "$1" == update ]]; then
     deadline=(timeout --signal=TERM --kill-after=30s 5m)
   fi
-  local -a apt_env=(DEBIAN_FRONTEND=noninteractive)
+  # ACCEPT_EULA is what mssql-tools18 and the ODBC driver under it read instead of prompting; a
+  # debconf prompt no one can answer would hang the transaction.
+  local -a apt_env=(DEBIAN_FRONTEND=noninteractive ACCEPT_EULA=Y)
   [[ ! -e "$APT_RESTART_SHIELD" ]] || apt_env+=(NEEDRESTART_SUSPEND=1)
   run_with_progress "$operation" "${deadline[@]}" sudo env "${apt_env[@]}" apt-get \
     -o DPkg::Lock::Timeout=600 \
@@ -209,7 +203,7 @@ apt_repo() {
 # Deliberately absent: gh (AGENTS.md rule 3 — this machine's remote is Azure DevOps), and the
 # packages.microsoft.com/.../prod repository that carries pwsh and mssql-tools. That repository is
 # keyed by Ubuntu version and lags new releases badly, which would fail the bootstrap on exactly the
-# image it targets. sqlcmd comes from a GitHub release instead, and PowerShell is not installed at
+# image it targets. sqlcmd comes from Microsoft's prod repo instead, and PowerShell is not installed at
 # all: ld-fe replaces frontend.ps1 and ld-dev.sh replaces backend.ps1.
 # --------------------------------------------------------------------------------------------------
 log "apt sources"
@@ -219,6 +213,10 @@ apt_repo nodesource https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \
   "deb [arch=amd64 signed-by=$KEYRINGS/nodesource.gpg] https://deb.nodesource.com/node_${NODE_MAJOR}.x nodistro main"
 apt_repo azure-cli https://packages.microsoft.com/keys/microsoft.asc \
   "deb [arch=amd64 signed-by=$KEYRINGS/azure-cli.gpg] https://packages.microsoft.com/repos/azure-cli/ $CODENAME main"
+# mssql-tools18 carries sqlcmd. Microsoft's prod repo is keyed by release number rather than
+# codename, and publishes for this one (checked 2026-09-14 for 26.04/resolute).
+apt_repo mssql-prod https://packages.microsoft.com/keys/microsoft.asc \
+  "deb [arch=amd64 signed-by=$KEYRINGS/mssql-prod.gpg] https://packages.microsoft.com/ubuntu/${VERSION_ID}/prod $CODENAME main"
 # Ubuntu freezes git at release; the maintainers' PPA tracks upstream stable for every release.
 apt_repo git-core "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0xF911AB184317630C59970973E363C90F8F1B6217" \
   "deb [arch=amd64 signed-by=$KEYRINGS/git-core.gpg] https://ppa.launchpadcontent.net/git-core/ppa/ubuntu $CODENAME main"
@@ -238,9 +236,10 @@ apt install -y --no-install-recommends \
   openssh-server ufw unattended-upgrades \
   ca-certificates curl wget gnupg jq \
   git make build-essential python3 \
-  unzip zip tmux htop lsof zsh cron \
+  unzip zip tmux htop lsof zsh cron rsync \
   docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin \
-  nodejs azure-cli
+  nodejs azure-cli \
+  ripgrep fd-find shellcheck mssql-tools18
 
 # --------------------------------------------------------------------------------------------------
 # Docker Engine
@@ -300,57 +299,12 @@ run_with_progress ".NET workload manifests" sudo "$DOTNET_ROOT/dotnet" workload 
 run_with_progress "dotnet-ef global tool" "$DOTNET_ROOT/dotnet" tool update -g dotnet-ef
 
 # --------------------------------------------------------------------------------------------------
-# Single-binary tools from their GitHub releases, so they track upstream stable rather than the
-# version Ubuntu froze at release.
+# Ubuntu names two of these differently from the commands everyone types, and Microsoft keeps
+# sqlcmd off PATH. Link rather than alias, so a script and a login shell find them alike.
 # --------------------------------------------------------------------------------------------------
-github_binary() {
-  # github_binary <binary> <version> <url> [member inside the archive]
-  local binary="$1" version="$2" url="$3" member="${4:-}"
-  local current
-  current="$("$binary" --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -n 1 || true)"
-  log "$binary $version"
-  [[ "$current" != "$version" ]] || return 0
-  local work
-  work="$(mktemp -d)"
-  if [[ -n "$member" ]]; then
-    download "$binary $version" "$url" "$work/archive"
-    tar -C "$work" -xf "$work/archive" "$member"
-    sudo install -m 0755 "$work/$member" "/usr/local/bin/$binary"
-  else
-    download "$binary $version" "$url" "$work/$binary"
-    sudo install -m 0755 "$work/$binary" "/usr/local/bin/$binary"
-  fi
-  rm -rf "$work"
-}
-
-RIPGREP_VERSION="$(latest_github_tag BurntSushi/ripgrep)"
-FD_VERSION="$(latest_github_tag sharkdp/fd)"
-SHELLCHECK_VERSION="$(latest_github_tag koalaman/shellcheck)"
-SQLCMD_VERSION="$(latest_github_tag microsoft/go-sqlcmd)"
-for v in RIPGREP_VERSION FD_VERSION SHELLCHECK_VERSION SQLCMD_VERSION; do
-  [[ -n "${!v}" && "${!v}" != null ]] || die "could not resolve $v"
-done
-
-github_binary rg "$RIPGREP_VERSION" \
-  "https://github.com/BurntSushi/ripgrep/releases/download/${RIPGREP_VERSION}/ripgrep-${RIPGREP_VERSION}-x86_64-unknown-linux-musl.tar.gz" \
-  "ripgrep-${RIPGREP_VERSION}-x86_64-unknown-linux-musl/rg"
-github_binary fd "$FD_VERSION" \
-  "https://github.com/sharkdp/fd/releases/download/v${FD_VERSION}/fd-v${FD_VERSION}-x86_64-unknown-linux-musl.tar.gz" \
-  "fd-v${FD_VERSION}-x86_64-unknown-linux-musl/fd"
-github_binary shellcheck "$SHELLCHECK_VERSION" \
-  "https://github.com/koalaman/shellcheck/releases/download/v${SHELLCHECK_VERSION}/shellcheck-v${SHELLCHECK_VERSION}.linux.x86_64.tar.xz" \
-  "shellcheck-v${SHELLCHECK_VERSION}/shellcheck"
-# sqlcmd for the SQL Server in the compose file, without the codename-gated mssql-tools package.
-if [[ "$(sqlcmd --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -n1)" != "$SQLCMD_VERSION" ]]; then
-  log "sqlcmd $SQLCMD_VERSION"
-  work="$(mktemp -d)"
-  download "sqlcmd $SQLCMD_VERSION" \
-    "https://github.com/microsoft/go-sqlcmd/releases/download/v${SQLCMD_VERSION}/sqlcmd-linux-amd64.tar.bz2" \
-    "$work/sqlcmd.tar.bz2"
-  tar -C "$work" -xf "$work/sqlcmd.tar.bz2"
-  sudo install -m 0755 "$work/sqlcmd" /usr/local/bin/sqlcmd
-  rm -rf "$work"
-fi
+log "tool names"
+[[ -e /usr/local/bin/fd ]] || sudo ln -s "$(command -v fdfind)" /usr/local/bin/fd
+[[ -e /usr/local/bin/sqlcmd ]] || sudo ln -s /opt/mssql-tools18/bin/sqlcmd /usr/local/bin/sqlcmd
 
 # --------------------------------------------------------------------------------------------------
 # npm-delivered tools: yarn (the frontend uses Yarn Classic), the Azure Functions Core Tools that
@@ -436,8 +390,8 @@ fi
 mkdir -p "$WORKTREES"
 
 # --------------------------------------------------------------------------------------------------
-# SSH keys and git identity. One key reaches both GitHub for this repository and Azure DevOps for
-# loady-one. Each checkout is bound to it with core.sshCommand, so nothing depends on an agent
+# SSH keys and git identity. One key, one remote: Azure DevOps for loady-one, the only checkout on
+# this machine. It is bound to the key with core.sshCommand, so nothing depends on an agent
 # forwarded from the Mac and every headless session — Rider's backend, tmux, cron — pushes the same.
 # --------------------------------------------------------------------------------------------------
 log "ssh keys"
@@ -461,7 +415,7 @@ place_secret() {
 }
 
 # One key for every git remote this machine talks to. It is the founder's existing Loady key, which
-# is already registered on both Azure DevOps and GitHub, so nothing new is created and no profile
+# is already registered on Azure DevOps, the only git service this machine reaches, so nothing new
 # changes. IdentitiesOnly matters more than it looks: Azure DevOps accepts the first key offered and
 # may reject the request outright rather than trying the next one.
 git_key="$HOME/.ssh/loady/id_rsa"
@@ -475,16 +429,6 @@ add_known_host() {
   local line="$1"
   grep -qxF "$line" "$HOME/.ssh/known_hosts" || echo "$line" >>"$HOME/.ssh/known_hosts"
 }
-
-# GitHub's host keys, from its published metadata over HTTPS. No gh: this is a plain API read
-# (AGENTS.md rule 3).
-if github_keys="$(curl -fsSL --connect-timeout 10 --max-time 30 --retry 2 https://api.github.com/meta | jq -r '.ssh_keys[]?')" \
-  && [[ -n "$github_keys" ]]; then
-  while IFS= read -r key; do add_known_host "github.com $key"; done <<<"$github_keys"
-else
-  git_todo="$git_todo
-  - could not fetch GitHub's host keys from api.github.com; rerun when the network allows"
-fi
 
 # Azure DevOps publishes one RSA host key. Take whatever ssh-keyscan offers, but keep only the key
 # whose fingerprint matches the published one — that is the difference between pinning and hoping.
@@ -504,7 +448,7 @@ fi
 
 log "git identity"
 git config --global user.name "$GIT_USER_NAME"
-git config --global user.email >/dev/null 2>&1 || git config --global user.email "$GIT_PERSONAL_EMAIL"
+git config --global user.email "$GIT_EMAIL"
 # Never a rebase on pull: a rebased branch needs a force-push, and nothing here force-pushes.
 git config --global pull.rebase false
 
@@ -531,13 +475,7 @@ elif ! ssh-keygen -y -P "" -f "$git_key" >/dev/null 2>&1; then
   # hold the passphrase-less copy, so say so plainly rather than hang later.
   die "the git key is passphrase-protected; replace the register field with a passphrase-less copy (docs/manual-secrets.md)"
 else
-  clone_checkout "$VM_REPO_URL" "$VM_REPO" "$git_ssh_command"
   clone_checkout "$LOADY_REPO_URL" "$REPO" "$git_ssh_command"
-fi
-
-if [[ -d "$REPO/.git" ]]; then
-  git -C "$REPO" config user.name "$GIT_USER_NAME"
-  git -C "$REPO" config user.email "$GIT_WORK_EMAIL"
 fi
 
 # --------------------------------------------------------------------------------------------------
@@ -547,7 +485,7 @@ fi
 # Nothing here touches a dirty working tree. Under AGENTS.md rule 2 nothing commits automatically,
 # so uncommitted work is the normal state on this machine and the disk is its only copy.
 # --------------------------------------------------------------------------------------------------
-if [[ -d "$VM_REPO/.git" ]]; then
+if [[ -d "$VM_REPO" ]]; then
   log "agent files and dotfiles"
   [[ -x "$VM_REPO/scripts/link-agent-files.sh" ]] \
     || die "$VM_REPO/scripts/link-agent-files.sh is missing or not executable"

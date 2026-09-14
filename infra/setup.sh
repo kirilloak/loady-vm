@@ -9,8 +9,9 @@
 # thing that would otherwise have been a copy from this Mac. A converge command with no
 # file-copying half also cannot silently overwrite something on the VM.
 #
-# Run it from this root after `ld-tfin`, which exports the register as TF_VAR_loady_ssh_git_base64; run it
-# from anywhere without, and the bootstrap converges everything except the keys.
+# `ld-vm-setup` loads the register before calling this, so the keys travel. Run this script by hand
+# without TF_VAR_loady_ssh_git_base64 in the environment and the bootstrap converges everything
+# except the keys, stopping at the clone.
 #
 # Usage: infra/setup.sh [ssh-host]      default: loady-vm
 set -euo pipefail
@@ -19,6 +20,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 HOST="${1:-${LD_VM_HOST:-loady-vm}}"
 BOOTSTRAP="$ROOT_DIR/bootstrap.sh"
 RUNNER="$ROOT_DIR/run-bootstrap.sh"
+SEND_TREE="$ROOT_DIR/send-tree.sh"
 REMOTE_DIR=/home/dev/.cache/loady-bootstrap
 
 # ssh forwards this Mac's LC_* to the VM, whose only locale is C.UTF-8; anything else makes every
@@ -51,6 +53,10 @@ env_file="$(
 # The secrets travel as a 0600 file over stdin rather than as process arguments. run-bootstrap.sh
 # moves that file to the run's own copy and removes this one as the run starts, and removes the copy
 # when it ends.
+# The VM reads this repository — scripts/, compose/, dotfiles/, agents/ — but does not clone it:
+# it is the Mac's, and the VM reaches Azure DevOps only (AGENTS.md rule 3). So send it first.
+"$SEND_TREE" "$HOST"
+
 # shellcheck disable=SC2029  # REMOTE_DIR is this script's own constant, and expanding it here is
 # what puts the path in the remote command.
 ssh "$HOST" "install -d -m 700 $REMOTE_DIR"

@@ -10,6 +10,7 @@ locals {
   ipv4_address   = split("/", var.ipv4_cidr)[0]
   bootstrap_path = "${path.module}/bootstrap.sh"
   runner_path    = "${path.module}/run-bootstrap.sh"
+  send_tree_path = "${path.module}/send-tree.sh"
 }
 
 resource "proxmox_download_file" "ubuntu_cloud_image" {
@@ -128,6 +129,13 @@ resource "terraform_data" "bootstrap" {
     private_key = var.ssh_private_key_file != null ? file(pathexpand(var.ssh_private_key_file)) : null
     agent       = var.ssh_private_key_file == null
     timeout     = "5m"
+  }
+
+  # The VM reads this repository but does not clone it: it is the Mac's, and the VM reaches Azure
+  # DevOps only (AGENTS.md rule 3). This runs on the Mac, over the same key as the connection below.
+  provisioner "local-exec" {
+    command     = "${local.send_tree_path} dev@${local.ipv4_address}"
+    interpreter = ["/bin/bash", "-c"]
   }
 
   provisioner "remote-exec" {

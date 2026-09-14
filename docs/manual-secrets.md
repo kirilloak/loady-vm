@@ -22,14 +22,19 @@ The second is Loady's own and holds exactly one field: `06e7a977-9e1f-4641-8e36-
 
 ## Filling `workstation/loady`
 
-**One field, one key, and no new keys anywhere.** The founder's existing `~/.ssh/loady/id_rsa` is already registered on
-both Azure DevOps and GitHub — verified 2026-09-14, it authenticates to `ssh.dev.azure.com` and to `github.com` as
-`kirilloak` — so it serves every git remote this VM talks to and neither profile needs a change.
+**One field, one key, and no new keys anywhere.** The founder's existing `~/.ssh/loady/id_rsa` is registered on Azure
+DevOps — verified 2026-09-14 from the VM, it authenticates to `ssh.dev.azure.com` — which is the only git service the VM
+reaches, so no profile needs a change.
+
+It is **not** registered on GitHub, and does not need to be. An earlier version of this file claimed it was, on the
+strength of a check run on the Mac: `ssh -i ~/.ssh/loady/id_rsa git@github.com` succeeds there only because ssh falls
+through to `~/.ssh/id_ed25519`, which is the key GitHub actually accepts. Run the same command from the VM and GitHub
+answers `Permission denied (publickey)`. Under rule 3 nothing on the VM talks to GitHub anyway.
 
 | What                         | Key                                              | Where it lives                                                              |
 |------------------------------|--------------------------------------------------|-----------------------------------------------------------------------------|
 | Mac logs in to the VM        | `~/.ssh/id_ed25519`, the Mac's existing main key | Mac only; cloud-init puts the **public** half in the VM's `authorized_keys` |
-| VM → Azure DevOps and GitHub | `~/.ssh/loady/id_rsa`, passphrase removed        | copied onto the VM by the bootstrap, as `ssh_loady_git_base64`              |
+| VM → Azure DevOps            | `~/.ssh/loady/id_rsa`, passphrase removed        | copied onto the VM by the bootstrap, as `ssh_loady_git_base64`              |
 
 Reusing the main key for VM login costs nothing: only its public half ever reaches the VM. The git key is different — a
 **private** key lands on the machine — which is why it is the work-scoped Loady key rather than the main personal one,
@@ -38,7 +43,7 @@ and why it is worth knowing that anyone who reaches the VM's `dev` user has it.
 RSA is not a preference. Azure DevOps accepts only RSA for Git over SSH
 ([Azure Repos SSH documentation](https://learn.microsoft.com/en-us/azure/devops/repos/git/use-ssh-keys-to-authenticate?view=azure-devops),
 updated 2026-08-13, whose only example is `ssh-keygen -t rsa -b 3072`; ED25519 support is still an open request on two
-feedback portals). GitHub accepts RSA too, so one key covers both. Checked twice, 2026-09-14.
+feedback portals). Checked twice, 2026-09-14.
 
 ### The passphrase has to go — on a copy
 
@@ -50,23 +55,21 @@ every reboot. Strip it on a **copy**; the original on the Mac keeps its passphra
 cp ~/.ssh/loady/id_rsa /tmp/loady-git-vm
 ssh-keygen -p -N "" -f /tmp/loady-git-vm      # enter the existing passphrase once
 
-# Same key, so both fingerprints match and both remotes still accept it:
+# Same key, so the fingerprints match and the remote still accepts it:
 ssh-keygen -lf ~/.ssh/loady/id_rsa.pub
 ssh-keygen -lf /tmp/loady-git-vm
 ssh -i /tmp/loady-git-vm -o IdentitiesOnly=yes -T git@ssh.dev.azure.com   # no prompt
-ssh -i /tmp/loady-git-vm -o IdentitiesOnly=yes -T git@github.com          # no prompt
 ```
 
 Removing a passphrase re-encrypts the private file and leaves the public half byte-for-byte identical, which is why
 nothing has to be re-registered anywhere.
 
-### Neither profile needs a new entry
+### The profile needs no new entry
 
 - Azure DevOps: <https://dev.azure.com/Loady-Logistics/_usersSettings/keys> already lists this key. Add one only if it
   is removed or expires — Azure DevOps enforces key expiry by default, warns seven days ahead, and fails with
   `remote: Authentication failed: your SSH key has expired`. To re-add, paste `~/.ssh/loady/id_rsa.pub` into **New
   Key**.
-- GitHub: <https://github.com/settings/keys> already lists it too.
 
 That page also prints the Azure DevOps server fingerprints, which are what `bootstrap.sh` pins when it writes the VM's
 `known_hosts` — confirmed identical on 2026-09-14:
@@ -130,7 +133,7 @@ terraform import proxmox_virtual_environment_vm.loady_vm pve-2/201
 ```
 
 or rebuild it, which is the cheaper answer most days — the machine holds nothing that is not in Git or Bitwarden except
-unpushed work. Check for that first: `ld-tfd` refuses while any exists.
+unpushed work. Check for that first: `ld-tfd --rebuild` refuses while any exists.
 
 ## Lost access to the VM
 

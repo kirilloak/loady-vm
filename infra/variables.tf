@@ -101,7 +101,7 @@ variable "ssh_private_key_file" {
 # because a successful apply promises a cloned, built and warmed development workstation.
 
 variable "loady_ssh_git_base64" {
-  description = "The founder's existing Loady key (~/.ssh/loady/id_rsa on the Mac) with its passphrase removed. One key for every git remote this machine uses: it is already registered on both Azure DevOps and GitHub. RSA because Azure DevOps accepts nothing else; passphrase-less because a headless Rider backend and an agent shell cannot answer a prompt"
+  description = "The founder's existing Loady key (~/.ssh/loady/id_rsa on the Mac) with its passphrase removed. The one remote the VM uses is Azure DevOps, where this key is already registered. RSA because Azure DevOps accepts nothing else; passphrase-less because a headless Rider backend and an agent shell cannot answer a prompt"
   type        = string
   sensitive   = true
 
