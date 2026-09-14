@@ -33,6 +33,11 @@ Set **Settings > Tools > Azure Functions > Core Tools executable** to
 follow this VM's npm-installed `/usr/bin/func` launcher correctly, although that launcher works in
 the login shell.
 
+On an existing Rider workspace, open **Run > Edit Configurations**, select the auto-imported
+`Project: Profile`, Docker and test-project entries, and remove them with **Alt+Delete**. Rider only
+auto-imports launch profiles when a solution has no configurations; the shared configurations now
+prevent them from returning unless **Generate Configurations** is invoked on `launchSettings.json`.
+
 ## Run configurations
 
 Docker owns only SQL Server, Cosmos DB, Redis, Azurite and the APIM proxy. Start from cold with

@@ -48,10 +48,16 @@ Recorded as it happens. `not run` means not run, not "assumed fine".
 
 ## Manual actions left for the founder
 
-| Set **Settings > Tools > Azure Functions > Core Tools executable** to `/usr/lib/node_modules/azure-functions-core-tools/bin/func`. |
-| Re-run `all-backend` from cold three times; if the historical concurrent-start race appears, start the hosts individually in manifest order and revise the compounds. |
-| Run `be-seeder`, `be-test-data-seeder`, `all-stack`, `all-public`, `fe-company-admin` and `fe-dev`; confirm the frontend request path and a bound breakpoint. |
-| Run `az login --use-device-code`, then test `be-backend-sso` with `fe-sso` and confirm the seeded data is local. |
+- In **Run > Edit Configurations**, remove the auto-imported launch-profile, Docker and test-project
+  entries with **Alt+Delete**. The shared configurations prevent automatic re-import.
+- Set **Settings > Tools > Azure Functions > Core Tools executable** to
+  `/usr/lib/node_modules/azure-functions-core-tools/bin/func`.
+- Re-run `all-backend` from cold three times; if the historical concurrent-start race appears,
+  start the hosts individually in manifest order and revise the compounds.
+- Run `be-seeder`, `be-test-data-seeder`, `all-stack`, `all-public`, `fe-company-admin` and
+  `fe-dev`; confirm the frontend request path and a bound breakpoint.
+- Run `az login --use-device-code`, then test `be-backend-sso` with `fe-sso` and confirm the seeded
+  data is local.
 
 ## Notes
 
