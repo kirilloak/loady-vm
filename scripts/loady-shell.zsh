@@ -36,7 +36,7 @@ ld_run_with_bw_session() {
 # ---------------------------------------------------------------------------------------------
 
 # Any command on the VM, in its login shell from the checkout, so the ld-* functions exist there
-# too: ld-vm ld-status, ld-vm 'ld-start --public', ld-vm 'cd ~/loady-vm && git status'.
+# too: ld-vm ld-reset, ld-vm 'ld-mig', ld-vm 'cd ~/loady-vm && git status'.
 # LC_ALL: ssh forwards the Mac's LC_CTYPE=UTF-8, which the VM does not have, and every perl-based
 # apt step there warns about it.
 ld-vm()       { ssh -t "${LD_VM_HOST:-loady-vm}" -- "export LC_ALL=C.UTF-8; cd ~/loady-one && zsh -lic ${(q)*}"; }
@@ -52,37 +52,17 @@ ld-down()     { ld_run scripts/vm.sh stop loady; }
 ld-tfd()      { ld_run_with_bw_session scripts/rebuild-loady-vm.zsh "$@"; }
 
 # ---------------------------------------------------------------------------------------------
-# The stack, on the VM
+# The backing services, on the VM
 # ---------------------------------------------------------------------------------------------
-ld-start()   { ld_run scripts/ld-dev.sh start "$@"; }
-ld-stop()    { ld_run scripts/ld-dev.sh stop "$@"; }
-ld-restart() { ld_run scripts/ld-dev.sh restart "$@"; }
-ld-status()  { ld_run scripts/ld-dev.sh status "$@"; }
-ld-logs()    { ld_run scripts/ld-dev.sh logs "$@"; }
-ld-build()   { ld_run scripts/ld-dev.sh build "$@"; }
-ld-seed()    { ld_run scripts/ld-dev.sh seed "$@"; }
+# Docker runs the backing services; Rider runs every application. So there is one command here and
+# no second way to start, stop or inspect a function host, the frontend or a seeder — those are run
+# configurations in dotfiles/rider/run/, and a shell command that did the same thing would disagree
+# with Rider about what is running.
 ld-reset()   { ld_run scripts/ld-reset.sh "$@"; }
-# The Cosmos emulator's self-signed certificate, into this machine's trust store. ld-start does
+# The Cosmos emulator's self-signed certificate, into this machine's trust store. ld-reset does
 # this itself; run it by hand after an emulator reset done another way, or with --print to copy
 # the certificate to the Mac for a browser or a Mac-side client.
 ld-cosmos-cert() { ld_run scripts/cosmos-cert.sh "$@"; }
-
-# The frontend dev server in local mode: the four variables frontend.ps1 exports, without needing
-# PowerShell on the machine. Defaults are that script's defaults.
-ld-fe() {
-  local repo
-  repo="$(git rev-parse --show-toplevel 2>/dev/null)"
-  [[ -n "$repo" && -f "$repo/backend/Loady.slnx" ]] || repo="$LOADY_REPO"
-  [[ -d "$repo/frontend" ]] || { print -ru2 -- "ld-fe: no frontend in $repo"; return 1; }
-  (
-    cd "$repo/frontend" || return 1
-    export VUE_APP_API_BASE_URL="http://localhost:7000/app"
-    export VUE_APP_AUTH_ENABLE_LOCAL_MODE=true
-    export VUE_APP_AUTH_LOCAL_COMPANY_ID="${1:-TESTCOMPANY1}"
-    export VUE_APP_AUTH_LOCAL_USER_ID="${2:-99999999-9999-9999-9999-999999999999}"
-    yarn install --frozen-lockfile && yarn start
-  )
-}
 
 # ---------------------------------------------------------------------------------------------
 # Migrations

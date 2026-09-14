@@ -32,7 +32,7 @@ ld_need() {
 ld_repo() {
   # The loady-one checkout this command applies to: the worktree the caller is standing in, or
   # the primary checkout. A directory inside neither resolves to the primary checkout, which is
-  # what makes `ld-start` from the home directory do the obvious thing.
+  # what makes `ld-reset` from the home directory do the obvious thing.
   local root
   if root="$(git rev-parse --show-toplevel 2>/dev/null)" \
     && [[ -f "$root/backend/Loady.slnx" ]]; then

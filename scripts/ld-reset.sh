@@ -1,13 +1,18 @@
 #!/usr/bin/env bash
-# Recreate the local containers from scratch: what the old `ld-reset` alias did, fixed and moved
-# here. Destroys the volumes, then hands off to `ld-dev.sh start`, which waits for readiness,
-# builds, reseeds the empty databases and starts the function hosts. Reset ends with a stack that
-# is up; `ld-start` is the same thing without the wipe.
+# Recreate the local backing services from scratch, and stop there.
+#
+# Docker runs the backing services; Rider runs every application. So this brings up SQL Server, the
+# Cosmos emulator, Redis, Azurite and the APIM proxy, waits until the two that need waiting for
+# answer, installs the emulator's fresh certificate, and ends. The build, the seeders and the
+# function hosts are run configurations in Rider now — see dotfiles/rider/run/ and
+# docs/remote-development.md.
+#
+# This is the only stack command. Nothing here starts, stops or inspects an application, because
+# a second way to do what Rider does would disagree with it sooner or later.
 #
 # Usage:
-#   ld-reset.sh                 recreate, then start
-#   ld-reset.sh --public        and the public function hosts
-#   ld-reset.sh --hard          also dotnet clean and clear the run state before starting
+#   ld-reset.sh            recreate the containers and wait for them
+#   ld-reset.sh --hard     also dotnet clean the solution first
 set -euo pipefail
 LD_PROG=ld-reset
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -18,12 +23,10 @@ ld_need docker jq
 
 REPO="$(ld_repo)"
 HARD=0
-START_ARGS=()
 for arg in "$@"; do
   case "$arg" in
-    --hard)   HARD=1 ;;
-    --public) START_ARGS+=(--public) ;;
-    *)        ld_die "usage: ld-reset.sh [--public] [--hard]" ;;
+    --hard) HARD=1 ;;
+    *)      ld_die "usage: ld-reset.sh [--hard]" ;;
   esac
 done
 
@@ -53,9 +56,10 @@ $(printf '%s\n' "$only_theirs" | sed 's/^/         /')
 
 drift_check
 
-# Stop the function hosts first: they hold connections to the containers being destroyed, and a
-# host left running against a wiped database fails in a way that looks like a code problem.
-"$HERE/ld-dev.sh" stop >/dev/null 2>&1 || true
+# Applications are Rider's, so this cannot stop them — and a host left running against a database
+# that is about to be destroyed fails in a way that reads as a code problem. Say so; the founder
+# stops them with Rider's stop button.
+ld_warn "stop any running application in Rider before continuing; the databases are about to go."
 
 "$HERE/slot.sh" claim loadystack "ld-reset in ${REPO/#"$HOME"/\~}"
 
@@ -68,9 +72,22 @@ ld_compose pull
 if ((HARD)); then
   ld_log "dotnet clean"
   dotnet clean "$REPO/backend/Loady.slnx" --nologo --verbosity quiet
-  rm -rf "${LOADY_STATE:?}/run"
 fi
 
-# The slot stays claimed: ld-dev.sh re-claims it for this same worktree, which is a no-op, and the
-# stack it leaves running is what holds it.
-exec "$HERE/ld-dev.sh" start "${START_ARGS[@]}"
+ld_log "containers"
+ld_compose up -d
+
+# Probed from the host, not from a container healthcheck: the Cosmos emulator image cannot be
+# relied on to carry a tool to check itself with, and the seeders fail confusingly against a
+# half-started emulator rather than waiting.
+# shellcheck disable=SC2016  # $MSSQL_SA_PASSWORD must expand inside the container, not here
+ld_wait_for "sqlserver" 180 bash -c \
+  'docker exec sqlserver /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -Q "SELECT 1" 2>/dev/null
+   || docker exec sqlserver /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -Q "SELECT 1"'
+ld_wait_for "cosmosdb" 600 curl -fsSk https://localhost:8081/_explorer/emulator.pem
+
+# The emulator generates its certificate into its data volume, so it is new after every reset and
+# the trust store has to follow it. Idempotent: a no-op when it is already the trusted one.
+"$HERE/cosmos-cert.sh"
+
+ld_log "containers ready. In Rider: 'seeder', then 'test-data-seeder', then 'stack'."

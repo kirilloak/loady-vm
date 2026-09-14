@@ -1,0 +1,41 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="be-backend-sso" type="AzureFunctionAppRun" factoryName="Azure - Run Function">
+    <!-- Loady.Backend.Api, the sso variant of be-backend: same project and port, the Dev launch
+         profile so appsettings.Development.json applies and sign-in goes through the real dev B2C
+         tenant, and the envs below to point the infrastructure back at this machine.
+         TRACK_ENVS=0 is what makes them win over the profile's own.
+         Needs an az device-code login on the VM: Key Vault, Azure Search and the blob
+         accounts are not overridden and use DefaultAzureCredential. -->
+    <option name="PROJECT_FILE_PATH" value="$PROJECT_DIR$/src/Domains/Loady.Backend.Api/Loady.Backend.Api.csproj" />
+    <option name="LAUNCH_PROFILE_NAME" value="Dev" />
+    <option name="PROJECT_TFM" value="net10.0" />
+    <option name="FUNCTION_NAMES" value="" />
+    <option name="PROJECT_ARGUMENTS_TRACKING" value="1" />
+    <option name="PROGRAM_PARAMETERS" value="host start --pause-on-error --port 7160" />
+    <option name="PROJECT_WORKING_DIRECTORY_TRACKING" value="1" />
+    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/src/Domains/Loady.Backend.Api/bin/Debug/net10.0" />
+    <option name="TRACK_ENVS" value="0" />
+    <envs>
+      <!-- Not in the Mac original: on docker engine a loopback-bound host is unreachable from the
+           apim container. See docs/remote-development.md. -->
+      <env name="ASPNETCORE_URLS" value="http://0.0.0.0:7160" />
+      <env name="AZURE_FUNCTIONS_ENVIRONMENT" value="Development" />
+      <env name="AzureQueue__QueueServiceUri" value="UseDevelopmentStorage=true" />
+      <env name="CosmosAccount__AccountEndpoint" value="AccountEndpoint=https://localhost:8081/;AccountKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==" />
+      <env name="FrontendSettings__FrontendUrl" value="http://localhost:8080" />
+      <env name="Redis__ConnectionString" value="127.0.0.1:6379" />
+      <env name="SqlServer__ConnectionString" value="Server=localhost,1433;Database=loady;User Id=sa;Password=Passw0rd!;TrustServerCertificate=True;" />
+      <env name="Logging__EnableConsole" value="true" />
+      <env name="Logging__LogLevel__Default" value="Warning" />
+      <env name="Logging__LogLevel__Loady" value="Information" />
+      <env name="AzureFunctionsJobHost__logging__logLevel__default" value="Warning" />
+      <env name="AzureFunctionsJobHost__logging__logLevel__Loady" value="Information" />
+    </envs>
+    <option name="USE_EXTERNAL_CONSOLE" value="0" />
+    <option name="TRACK_URL" value="1" />
+    <option name="TRACK_BROWSER_LAUNCH" value="0" />
+    <method v="2">
+      <option name="Build" />
+    </method>
+  </configuration>
+</component>

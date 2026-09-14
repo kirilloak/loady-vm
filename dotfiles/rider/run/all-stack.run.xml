@@ -1,0 +1,8 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="all-stack" type="CompoundRunConfigurationType">
+    <!-- The everyday stack: the default hosts and the frontend. -->
+    <toRun name="all-backend" type="CompoundRunConfigurationType" />
+    <toRun name="fe-loady-admin" type="js.build_tools.npm" />
+    <method v="2" />
+  </configuration>
+</component>

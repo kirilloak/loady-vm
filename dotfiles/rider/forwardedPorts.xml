@@ -2,39 +2,143 @@
 <project version="4">
   <component name="PortForwardingSettings">
     <ports>
+      <!-- Cosmos emulator explorer -->
+      <entry key="1234">
+        <ForwardedPortInfo>
+          <option name="hostPort" value="1234" />
+          <option name="readOnly" value="false" />
+        </ForwardedPortInfo>
+      </entry>
+      <!-- SQL Server -->
       <entry key="1433">
         <ForwardedPortInfo>
           <option name="hostPort" value="1433" />
           <option name="readOnly" value="false" />
         </ForwardedPortInfo>
       </entry>
+      <!-- Redis -->
       <entry key="6379">
         <ForwardedPortInfo>
           <option name="hostPort" value="6379" />
           <option name="readOnly" value="false" />
         </ForwardedPortInfo>
       </entry>
+      <!-- APIM (nginx) — what the frontend calls -->
       <entry key="7000">
         <ForwardedPortInfo>
           <option name="hostPort" value="7000" />
           <option name="readOnly" value="false" />
         </ForwardedPortInfo>
       </entry>
+      <!-- Loady.Backoffice.Api -->
+      <entry key="7001">
+        <ForwardedPortInfo>
+          <option name="hostPort" value="7001" />
+          <option name="readOnly" value="false" />
+        </ForwardedPortInfo>
+      </entry>
+      <!-- Loady.Loady2Share.Api -->
+      <entry key="7094">
+        <ForwardedPortInfo>
+          <option name="hostPort" value="7094" />
+          <option name="readOnly" value="false" />
+        </ForwardedPortInfo>
+      </entry>
+      <!-- Loady.Loady2Go.Api -->
+      <entry key="7152">
+        <ForwardedPortInfo>
+          <option name="hostPort" value="7152" />
+          <option name="readOnly" value="false" />
+        </ForwardedPortInfo>
+      </entry>
+      <!-- Loady.Backend.Api -->
       <entry key="7160">
         <ForwardedPortInfo>
           <option name="hostPort" value="7160" />
           <option name="readOnly" value="false" />
         </ForwardedPortInfo>
       </entry>
+      <!-- Loady.Public.Api -->
+      <entry key="7247">
+        <ForwardedPortInfo>
+          <option name="hostPort" value="7247" />
+          <option name="readOnly" value="false" />
+        </ForwardedPortInfo>
+      </entry>
+      <!-- Loady.Public.BusinessPartners.Api -->
+      <entry key="7248">
+        <ForwardedPortInfo>
+          <option name="hostPort" value="7248" />
+          <option name="readOnly" value="false" />
+        </ForwardedPortInfo>
+      </entry>
+      <!-- Loady.Public.Lanes.Api -->
+      <entry key="7249">
+        <ForwardedPortInfo>
+          <option name="hostPort" value="7249" />
+          <option name="readOnly" value="false" />
+        </ForwardedPortInfo>
+      </entry>
+      <!-- Loady.Public.Products.Api -->
+      <entry key="7250">
+        <ForwardedPortInfo>
+          <option name="hostPort" value="7250" />
+          <option name="readOnly" value="false" />
+        </ForwardedPortInfo>
+      </entry>
+      <!-- Loady.Public.LoadingPoints.Api -->
+      <entry key="7253">
+        <ForwardedPortInfo>
+          <option name="hostPort" value="7253" />
+          <option name="readOnly" value="false" />
+        </ForwardedPortInfo>
+      </entry>
+      <!-- Loady.Public.UnloadingPoints.Api -->
+      <entry key="7254">
+        <ForwardedPortInfo>
+          <option name="hostPort" value="7254" />
+          <option name="readOnly" value="false" />
+        </ForwardedPortInfo>
+      </entry>
+      <!-- Loady.Events.Api -->
       <entry key="7296">
         <ForwardedPortInfo>
           <option name="hostPort" value="7296" />
           <option name="readOnly" value="false" />
         </ForwardedPortInfo>
       </entry>
+      <!-- frontend dev server -->
       <entry key="8080">
         <ForwardedPortInfo>
           <option name="hostPort" value="8080" />
+          <option name="readOnly" value="false" />
+        </ForwardedPortInfo>
+      </entry>
+      <!-- Cosmos emulator -->
+      <entry key="8081">
+        <ForwardedPortInfo>
+          <option name="hostPort" value="8081" />
+          <option name="readOnly" value="false" />
+        </ForwardedPortInfo>
+      </entry>
+      <!-- Azurite blob -->
+      <entry key="10000">
+        <ForwardedPortInfo>
+          <option name="hostPort" value="10000" />
+          <option name="readOnly" value="false" />
+        </ForwardedPortInfo>
+      </entry>
+      <!-- Azurite queue -->
+      <entry key="10001">
+        <ForwardedPortInfo>
+          <option name="hostPort" value="10001" />
+          <option name="readOnly" value="false" />
+        </ForwardedPortInfo>
+      </entry>
+      <!-- Azurite table -->
+      <entry key="10002">
+        <ForwardedPortInfo>
+          <option name="hostPort" value="10002" />
           <option name="readOnly" value="false" />
         </ForwardedPortInfo>
       </entry>

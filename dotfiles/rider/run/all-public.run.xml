@@ -1,0 +1,12 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="all-public" type="CompoundRunConfigurationType">
+    <!-- The six public APIs, the group compose/processes.json marks public. -->
+    <toRun name="be-public" type="AzureFunctionAppRun" />
+    <toRun name="be-public-business-partners" type="AzureFunctionAppRun" />
+    <toRun name="be-public-lanes" type="AzureFunctionAppRun" />
+    <toRun name="be-public-loading-points" type="AzureFunctionAppRun" />
+    <toRun name="be-public-products" type="AzureFunctionAppRun" />
+    <toRun name="be-public-unloading-points" type="AzureFunctionAppRun" />
+    <method v="2" />
+  </configuration>
+</component>

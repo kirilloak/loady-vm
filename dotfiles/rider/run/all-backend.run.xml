@@ -1,0 +1,11 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="all-backend" type="CompoundRunConfigurationType">
+    <!-- The five hosts backend.ps1 starts by default. -->
+    <toRun name="be-backend" type="AzureFunctionAppRun" />
+    <toRun name="be-events" type="AzureFunctionAppRun" />
+    <toRun name="be-backoffice" type="AzureFunctionAppRun" />
+    <toRun name="be-loady2go" type="AzureFunctionAppRun" />
+    <toRun name="be-loady2share" type="AzureFunctionAppRun" />
+    <method v="2" />
+  </configuration>
+</component>

@@ -3,6 +3,10 @@
 # names and host ports and the function hosts bind fixed ports. Two worktrees can build and index
 # at the same time all day; only one can run the stack.
 #
+# `ld-reset` is what claims it. The function hosts are Rider's and are not tracked here, so this is
+# an announcement of intent rather than an enforcement of it — but it is the announcement that makes
+# a second worktree's `ld-reset` refuse instead of destroying the databases the first one is using.
+#
 # A refusal names the holder and is an answer, not an obstacle: stop the stack in that worktree, or
 # do work that does not need it.
 #
@@ -42,13 +46,13 @@ case "$command" in
 slot: '$slot' is held by ${existing/#"$HOME"/\~}
        since $(read_field since), for: $(read_field reason)
 
-       Stop it there ('ld-stop' in that worktree), or work on something that does not
+       Stop it there ('ld-reset' is what took it), or work on something that does not
        need the stack. If that worktree is gone, take it with:
            $(ld_vm_repo)/scripts/slot.sh steal $slot "<reason>"
 EOF
       exit 1
     fi
-    # Re-claiming your own slot is a no-op, so ld-start is safe to run twice.
+    # Re-claiming your own slot is a no-op, so ld-reset is safe to run twice.
     printf 'holder=%s\nsince=%s\nreason=%s\npid=%s\n' \
       "$holder_now" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$reason" "$$" >"$file"
     ;;

@@ -15,7 +15,7 @@
 # (/etc/profile.d/loady-dev.sh, written by infra/bootstrap.sh).
 #
 # Idempotent and cheap: when what the emulator serves is already what is installed, it does
-# nothing. ld-dev.sh runs it on every `ld-start`, right after the emulator reports ready, which is
+# nothing. ld-reset.sh runs it on every reset, right after the emulator reports ready, which is
 # what keeps the trust store correct across a reset.
 #
 # Usage:
@@ -103,7 +103,7 @@ esac
 
 fetch_chain >"$work/chain.pem"
 [[ -s "$work/chain.pem" ]] || ld_die \
-  "no TLS certificate from $COSMOS_HOST:$COSMOS_PORT — is the emulator running? ('ld-status')"
+  "no TLS certificate from $COSMOS_HOST:$COSMOS_PORT — is the emulator running? ('docker ps')"
 
 if [[ "${1:-}" == --print ]]; then
   cat "$work/chain.pem"

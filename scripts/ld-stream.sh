@@ -69,7 +69,7 @@ case "$command" in
     echo
     echo "Worktree ready: $path"
     echo "  cd \"$path\"      (or: ld-st $branch)"
-    echo "  the stack runs in one worktree at a time; 'ld-start' will say if another holds it."
+    echo "  the stack runs in one worktree at a time; 'ld-reset' will say if another holds it."
     ;;
 
   list)
@@ -108,7 +108,7 @@ EOF
     fi
 
     holder="$("$HERE/slot.sh" holder loadystack || true)"
-    [[ "$holder" == "$path" ]] && ld_die "'$branch' is running the stack; 'ld-stop' there first"
+    [[ "$holder" == "$path" ]] && ld_die "'$branch' holds the stack slot; stop its applications in Rider, then 'ld-reset' elsewhere"
 
     git -C "$PRIMARY" worktree remove ${force:+--force} "$path"
     git -C "$PRIMARY" branch -D "$branch" 2>/dev/null || true
