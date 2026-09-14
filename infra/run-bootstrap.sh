@@ -58,7 +58,18 @@ tail_pid=$!
 ld_stop_tail() { kill "$tail_pid" 2>/dev/null || true; }
 trap ld_stop_tail EXIT
 
-while systemctl is-active --quiet "$UNIT"; do
+# The unit writes its status on the way out, so that file is the reliable end-of-run signal.
+# `systemctl is-active` is the fallback, and it lies once per run: upgrading the systemd package
+# reexecs systemd and restarts dbus, and for those few seconds every query fails with "Transport
+# endpoint is not connected" — which is not the run ending. Only a repeated no counts.
+unanswered=0
+while [[ ! -f "$STATE/status" ]]; do
+  if systemctl is-active --quiet "$UNIT" 2>/dev/null; then
+    unanswered=0
+  else
+    unanswered=$((unanswered + 1))
+    ((unanswered < 5)) || break
+  fi
   sleep 2
 done
 # The unit is gone before its last lines have been read out of the file.

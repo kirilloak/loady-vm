@@ -179,17 +179,25 @@ apt_repo() {
   # file; a rerun re-downloads nothing and rewrites the list only when its line changed.
   local name="$1" key_url="$2" deb_line="$3"
   local keyring="$KEYRINGS/$name.gpg" list="/etc/apt/sources.list.d/$name.list"
-  if [[ ! -f "$keyring" ]]; then
+  # The URL the keyring came from, beside it. A repository that rotates to a new signing key changes
+  # this URL, and without it the old keyring would be kept forever and every update would fail with
+  # NO_PUBKEY — the file exists, so nothing would ever fetch the new key.
+  local key_source="$KEYRINGS/$name.key-source"
+  if [[ ! -f "$keyring" || "$(cat "$key_source" 2>/dev/null || true)" != "$key_url" ]]; then
     local key
     key="$(mktemp)"
     curl -fsSL --connect-timeout 10 --max-time 120 --retry 3 --retry-all-errors "$key_url" -o "$key"
     if grep -q -- '-----BEGIN PGP PUBLIC KEY BLOCK-----' "$key"; then
-      sudo gpg --dearmor -o "$keyring" "$key"
+      # --batch --no-tty: this runs inside a systemd unit, which has no controlling terminal, and
+      # gpg opens /dev/tty on its own unless told not to.
+      sudo gpg --batch --yes --no-tty --dearmor -o "$keyring" "$key"
     else
       sudo install -m 0644 "$key" "$keyring"
     fi
     rm -f "$key"
     sudo chmod a+r "$keyring"
+    echo "$key_url" | sudo tee "$key_source" >/dev/null
+    apt_updated=false
   fi
   if [[ "$(cat "$list" 2>/dev/null || true)" != "$deb_line" ]]; then
     echo "$deb_line" | sudo tee "$list" >/dev/null
@@ -214,8 +222,10 @@ apt_repo nodesource https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \
 apt_repo azure-cli https://packages.microsoft.com/keys/microsoft.asc \
   "deb [arch=amd64 signed-by=$KEYRINGS/azure-cli.gpg] https://packages.microsoft.com/repos/azure-cli/ $CODENAME main"
 # mssql-tools18 carries sqlcmd. Microsoft's prod repo is keyed by release number rather than
-# codename, and publishes for this one (checked 2026-09-14 for 26.04/resolute).
-apt_repo mssql-prod https://packages.microsoft.com/keys/microsoft.asc \
+# codename, and publishes for this one (checked 2026-09-14 for 26.04/resolute). It is signed with a
+# year-stamped key rather than the one in microsoft.asc, which the azure-cli repo above still uses:
+# a NO_PUBKEY EE4D7792F748182B from this repository means the year below has moved on.
+apt_repo mssql-prod https://packages.microsoft.com/keys/microsoft-2025.asc \
   "deb [arch=amd64 signed-by=$KEYRINGS/mssql-prod.gpg] https://packages.microsoft.com/ubuntu/${VERSION_ID}/prod $CODENAME main"
 # Ubuntu freezes git at release; the maintainers' PPA tracks upstream stable for every release.
 apt_repo git-core "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0xF911AB184317630C59970973E363C90F8F1B6217" \
