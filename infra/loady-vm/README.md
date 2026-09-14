@@ -38,8 +38,8 @@ release, and the Functions Core Tools come from npm — all three deliberately, 
 ## Install, in order
 
 1. **Keys and the Bitwarden item.** `docs/manual-secrets.md`, all of it: the Mac's key to the VM,
-   the passphrase-less copy of the Azure DevOps key, a new GitHub key, the `loady-vm/keys` item,
-   and the two `.tf-vars` lines uncommented.
+   the passphrase-less copy of the Azure DevOps key, a new GitHub key, and the three fields on the
+   `workstation/loady` Bitwarden item that `.tf-vars` already names.
 
 2. **The name, on the Mac.** `loady-vm` is the LAN address permanently, in `/etc/hosts`;
    `/etc/hosts` wins over every resolver, so off the LAN use the tailnet name, which the hosts

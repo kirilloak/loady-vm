@@ -6,10 +6,10 @@
 
 ## Status
 
-**Partial — every step that does not need the Proxmox host, the Bitwarden item or the founder's
-keys is complete.** Steps 1-13 are done and verified. Steps 14-19 create and verify the machine and
-are listed under Manual actions: they need key material, a Bitwarden item that does not exist yet,
-and a host to build on.
+**Partial — every step that does not need the Proxmox host or the founder's key material is
+complete.** Steps 1-13 are done, verified, committed and pushed. Steps 14-19 create and verify the
+machine and are listed under Manual actions: they need the SSH keys, the fields on the
+`workstation/loady` Bitwarden item, and a host to build on.
 
 ## Files
 
@@ -45,7 +45,8 @@ Everything below was created by this task unless marked.
 
 **Terraform** (`infra/loady-vm/`)
 - `versions.tf`, `provider.tf`, `variables.tf`, `main.tf`, `outputs.tf`
-- `.tf-vars` — Proxmox and Tailscale live; the two `loady-vm/keys` lines commented pending the item
+- `.tf-vars` — all three items live: the shared Proxmox and Tailscale ones, and `workstation/loady`
+  (`06e7a977-9e1f-4641-8e36-b4c50096047a`) for the two SSH keys
 - `bootstrap.sh` — the whole guest
 - `setup.sh` — converge from the Mac
 - `tailscale-api.sh` — tailnet registration cleanup
@@ -71,14 +72,14 @@ Everything below was created by this task unless marked.
 
 In order. Steps 14-19 of the plan.
 
-1. **Commit and push this repository, before deleting anything.** `agents/backend/CLAUDE.md` and
-   `agents/infrastructure/CLAUDE.md` are currently the only copies besides the originals under
-   `~/Repositories/kirill/settings/macos/agents/`. Nothing here commits automatically (rule 2).
+1. ~~**Commit and push this repository.**~~ Done. `agents/backend/CLAUDE.md` and
+   `agents/infrastructure/CLAUDE.md` are on `origin/main`, so the originals under
+   `~/Repositories/kirill/settings/macos/agents/` are now safe to delete at action 9.
 
-2. **Create the keys and the Bitwarden item** — `docs/manual-secrets.md` end to end: the Mac's key
-   to the VM, the passphrase-less copy of `~/.ssh/loady/id_rsa`, a new GitHub key registered on the
-   GitHub account, the `loady-vm/keys` item, then uncomment the two lines in
-   `infra/loady-vm/.tf-vars` and put the item id in them.
+2. **Fill the `workstation/loady` Bitwarden item** — `docs/manual-secrets.md` end to end: the Mac's
+   key to the VM, the passphrase-less copy of `~/.ssh/loady/id_rsa`, and a new GitHub key registered
+   on the GitHub account, stored as the three `ssh_*_base64` fields. The item exists and `.tf-vars`
+   already names it, so nothing else changes once the fields are there.
    *Verify:* `ssh -i <copy> -o IdentitiesOnly=yes -T git@ssh.dev.azure.com` authenticates with no
    passphrase prompt.
 
