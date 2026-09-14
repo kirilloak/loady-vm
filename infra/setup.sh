@@ -9,9 +9,9 @@
 # thing that would otherwise have been a copy from this Mac. A converge command with no
 # file-copying half also cannot silently overwrite something on the VM.
 #
-# `ld-vm-setup` loads the register before calling this, so the keys travel. Run this script by hand
-# without TF_VAR_loady_ssh_git_base64 in the environment and the bootstrap converges everything
-# except the keys, stopping at the clone.
+# Run it from this root after `ld-tfin`, which exports the register as TF_VAR_loady_ssh_git_base64;
+# run it from anywhere without, and the bootstrap converges everything except the keys, stopping at
+# the clone.
 #
 # Usage: infra/setup.sh [ssh-host]      default: loady-vm
 set -euo pipefail

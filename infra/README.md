@@ -140,12 +140,12 @@ retry converge after a download that completed remotely but failed before Terraf
   the checkout — `ld-vm ld-status`, `ld-vm 'ld-start --public'`, `ld-vm 'git status'`.
 - **Power**: `vm-start loady`, `vm-stop loady`, `vm-status`. Starting one workstation VM stops the
   other.
-- **Converge or upgrade**: `ld-vm-setup` from anywhere, or `ld-tfd`, which does the same through
-  Terraform. Both load the Bitwarden register themselves, so the keys travel without `ld-tfin` in
-  front. Every run upgrades packages within the configured Ubuntu release, Docker, the SDKs, the
-  CLIs and the agents, rewrites only what differs, and reboots seconds later when Ubuntu requires
-  it.
-- **Rotate a key**: update the field in Bitwarden, then `ld-vm-setup`.
+- **Converge or upgrade**: `ld-tfd`, which loads the register itself, or `ld-tfin && ld-vm-setup`
+  to converge without Terraform (`ld-tfin` is what carries the keys into the shell; without it the
+  run stops at the clone). Every run upgrades packages within the configured Ubuntu release,
+  Docker, the SDKs, the CLIs and the agents, rewrites only what differs, and reboots seconds later
+  when Ubuntu requires it.
+- **Rotate a key**: update the field in Bitwarden, then `ld-tfin && ld-vm-setup`.
 - **Change what the VM has**: edit `bootstrap.sh`, then either command above.
 
 Each bootstrap runs on the VM as the systemd unit `loady-bootstrap`, started by `run-bootstrap.sh`,

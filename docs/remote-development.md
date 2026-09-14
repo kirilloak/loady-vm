@@ -211,7 +211,7 @@ for this solution, which is what keeps the arrangement honest.
 Git carries the work. Push before anything risky, and treat an unpushed branch as the only thing a
 VM loss can cost — which under rule 2 is a real risk, so push at the end of a session.
 
-The VM is disposable and has no Proxmox backup job: a rebuild is `ld-tfd`, which refuses while the
-VM holds uncommitted or unpushed work in the checkout or any worktree. Take a snapshot by hand
+The VM is disposable and has no Proxmox backup job: a rebuild is `ld-tfd --rebuild`, which refuses
+while the VM holds uncommitted or unpushed work in the checkout or any worktree. Take a snapshot by hand
 before an Ubuntu release upgrade and delete it after validating; a snapshot is not a backup and
 neither replaces Git.
