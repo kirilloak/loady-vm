@@ -25,7 +25,7 @@ for its project files: it should be `backend/.idea/.idea.Loady/.idea/`, and if i
 `RIDER_DIR` in `dotfiles/sync.sh` to match — the port mapping is synced through that path.
 
 `backend/.run` is linked to this repository by `scripts/link-agent-files.sh`. Rider should list 21
-shared configurations with the `be-`, `fe-` and `all-` prefixes. The Azure Toolkit plugin and
+shared configurations with the `be-`, `fe-` and `stack-` prefixes. The Azure Toolkit plugin and
 Rider's JavaScript and Node.js support must be enabled; the four `fe-*` configurations use the
 project Node interpreter and Yarn.
 
@@ -42,8 +42,9 @@ prevent them from returning unless **Generate Configurations** is invoked on `la
 ## Run configurations
 
 Docker owns only SQL Server, Cosmos DB, Redis, Azurite and the APIM proxy. Start from cold with
-`ld-reset`, then run `be-seeder`, `be-test-data-seeder` and `all-stack` in that order. `all-public`
-starts the six public function hosts when needed. The compound configurations start their members
+`ld-reset`, then run `be-seeder`, `be-test-data-seeder` and `stack-all` in that order.
+`stack-be-fe` starts only the main backend and frontend, while `stack-public-apis` starts the six
+public function hosts when needed. The compound configurations start their members
 concurrently; if a cold start exposes the historical Functions runtime race, start the `be-*`
 members individually in the order recorded by `compose/processes.json`.
 

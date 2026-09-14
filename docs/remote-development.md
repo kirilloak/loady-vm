@@ -81,8 +81,8 @@ commits automatically and the disk is the only copy.
 
 ```bash
 ld-reset            # wipe and start the five backing services; --hard also cleans the build
-# Rider: be-seeder, then be-test-data-seeder, then all-stack
-# Rider: all-public when the public surface is needed
+# Rider: be-seeder, then be-test-data-seeder, then stack-all
+# Rider: stack-public-apis when the public surface is needed
 ld-cosmos-cert      # refresh Cosmos trust manually; ld-reset already does it
 ```
 
@@ -91,9 +91,11 @@ the seeders, eleven function hosts and four frontend modes. The shared configura
 `dotfiles/rider/run/` and `scripts/link-agent-files.sh` links them into each checkout at
 `backend/.run`. `compose/processes.json` remains the source of truth for the host set and ports.
 
-The `all-backend` and `all-public` compounds start their members concurrently. The manifest keeps
-the historical stagger from `backend/backend.ps1` as diagnostic evidence; if a cold start exposes
-that Functions runtime race, start the `be-*` configurations individually in manifest order.
+The `stack-be-fe`, `stack-all` and `stack-public-apis` compounds start their members concurrently.
+`stack-all` adds Events, Loady2Go and Loady2Share to `stack-be-fe`; it does not include the public
+APIs. The manifest keeps the historical stagger from `backend/backend.ps1` as diagnostic evidence;
+if a cold start exposes that Functions runtime race, start the `be-*` configurations individually
+in manifest order.
 
 Migrations, replacing the old shell aliases:
 
@@ -178,7 +180,7 @@ debugger run on the VM. No project files are mounted or synchronised to the Mac.
 3. Connect; Gateway downloads the matching backend into the `dev` user's cache.
 4. Apply the settings in `dotfiles/rider/README.md` — SSH agent forwarding **off** above all.
 
-Rider loads the 21 shared `be-*`, `fe-*` and `all-*` configurations directly from `backend/.run`.
+Rider loads the 21 shared `be-*`, `fe-*` and `stack-*` configurations directly from `backend/.run`.
 The cold-start order and SSO prerequisite are in `dotfiles/rider/README.md`.
 
 Git to Azure DevOps uses the VM's own key, bound per checkout with `core.sshCommand`, so nothing

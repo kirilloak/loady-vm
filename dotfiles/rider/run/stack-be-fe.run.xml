@@ -1,0 +1,8 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="stack-be-fe" type="CompoundRunConfigurationType">
+    <!-- The main backend and frontend used for everyday development. -->
+    <toRun name="be-backend" type="AzureFunctionAppRun" />
+    <toRun name="fe-loady-admin" type="js.build_tools.npm" />
+    <method v="2" />
+  </configuration>
+</component>

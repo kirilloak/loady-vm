@@ -127,7 +127,7 @@ retry converge after a download that completed remotely but failed before Terraf
    ```
 
 8. **Run it**: `ld-vm ld-reset`, then in Rider run `be-seeder`, `be-test-data-seeder` and
-   `all-stack`. Open the frontend in the Mac's browser through forwarding and confirm a request
+   `stack-all`. Open the frontend in the Mac's browser through forwarding and confirm a request
    reaches a function host through `:7000` — that is the check that proves the Linux-specific
    fixes.
 

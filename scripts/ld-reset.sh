@@ -93,4 +93,4 @@ ld_wait_for "cosmosdb" 600 curl -fsSk https://localhost:8081/_explorer/emulator.
 # the trust store has to follow it. Idempotent: a no-op when it is already the trusted one.
 "$HERE/cosmos-cert.sh"
 
-ld_log "containers ready. In Rider: 'be-seeder', then 'be-test-data-seeder', then 'all-stack'."
+ld_log "containers ready. In Rider: 'be-seeder', then 'be-test-data-seeder', then 'stack-all'."

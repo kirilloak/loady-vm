@@ -27,7 +27,7 @@ Recorded as it happens. `not run` means not run, not "assumed fine".
 | Fresh login-shell command surface | Passed; retained commands resolve and all eight retired application commands do not |
 | `dotfiles/sync.sh --check` | Passed |
 | XML loading | Passed through Rider for all 21 run configurations; `xmllint` is not installed on the VM, so the plan's separate `xmllint --noout` command was not run |
-| `all-backend` launch through Rider | Blocked before host startup; builds passed, then Rider logged that it could not find v4 Core Tools under its download directory. `/usr/lib/node_modules/azure-functions-core-tools/bin/func` exists and reports 4.14.0; the required Rider setting is documented in `dotfiles/rider/README.md` |
+| Five-host backend compound launch through Rider | Blocked before host startup; builds passed, then Rider logged that it could not find v4 Core Tools under its download directory. `/usr/lib/node_modules/azure-functions-core-tools/bin/func` exists and reports 4.14.0; the required Rider setting is documented in `dotfiles/rider/README.md` |
 
 ## Files created or edited
 
@@ -52,18 +52,18 @@ Recorded as it happens. `not run` means not run, not "assumed fine".
   entries with **Alt+Delete**. The shared configurations prevent automatic re-import.
 - Set **Settings > Tools > Azure Functions > Core Tools executable** to
   `/usr/lib/node_modules/azure-functions-core-tools/bin/func`.
-- Re-run `all-backend` from cold three times; if the historical concurrent-start race appears,
+- Re-run `stack-all` from cold three times; if the historical concurrent-start race appears,
   start the hosts individually in manifest order and revise the compounds.
-- Run `be-seeder`, `be-test-data-seeder`, `all-stack`, `all-public`, `fe-company-admin` and
-  `fe-dev`; confirm the frontend request path and a bound breakpoint.
+- Run `be-seeder`, `be-test-data-seeder`, `stack-be-fe`, `stack-all`, `stack-public-apis`,
+  `fe-company-admin` and `fe-dev`; confirm the frontend request path and a bound breakpoint.
 - Run `az login --use-device-code`, then test `be-backend-sso` with `fe-sso` and confirm the seeded
   data is local.
 
 ## Notes
 
-- The implemented names use `be-*` for backend applications and `all-*` for compounds. This is the
-  same 21-configuration set described by the plan, with a consistent prefix scheme for Rider's
-  combined backend/frontend list.
+- The implemented names use `be-*` for backend applications, `fe-*` for frontend modes and
+  `stack-*` for compounds. The 21-configuration set described by the plan is unchanged in size;
+  `be-backoffice` is individually runnable but intentionally absent from the compounds.
 - Five backing-service containers were running during verification and no application ports were
   listening before the attempted compound launch. The failed launch left no hosts running.
 - No seeder or reset was run as part of this reconciliation, so no local data was deliberately
