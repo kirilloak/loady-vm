@@ -22,6 +22,39 @@ scripts/         the ld-* commands
 - How it all fits together, and how to connect Rider: `docs/remote-development.md`.
 - The rules every agent working in this repository follows: `AGENTS.md`.
 
+## Setting up the Mac
+
+The VM itself is built by `infra/README.md`. What the Mac needs, once, so that `ssh loady-vm`,
+`ld-vm`, `ld-vm-setup` and Rider all agree on how to reach it:
+
+1. **The name.** The VM is on the LAN only, at a static address.
+
+   ```bash
+   grep -q ' loady-vm$' /etc/hosts || echo '192.168.1.51 loady-vm' | sudo tee -a /etc/hosts
+   ```
+
+2. **The SSH config.** `~/.ssh/config` is a symlink into the founder's settings repository
+   (`settings/macos/dotfiles/.sshconfig`), so this is a tracked change there. Put the block
+   **above** the `Host *` block, because SSH takes the first value it sees for each option:
+
+   ```sshconfig
+   Host loady-vm
+       User dev
+       IdentityFile ~/.ssh/id_ed25519
+       IdentitiesOnly yes
+       AddKeysToAgent yes
+       UseKeychain yes
+       ServerAliveInterval 30
+       ServerAliveCountMax 3
+   ```
+
+   While there, pin the Azure DevOps key by hostname as well — `infra/README.md` says why.
+
+3. **The commands**, by sourcing `scripts/loady-shell.zsh` as below.
+
+Then `ssh loady-vm true` should succeed. If it does not, the VM is probably powered off: only one
+workstation VM runs at a time, so `ld-up` (or `vm-start loady`) starts it and stops the other.
+
 ## Commands
 
 `scripts/loady-shell.zsh` defines them; source it from `~/.zprofile` and `~/.zshrc`:
