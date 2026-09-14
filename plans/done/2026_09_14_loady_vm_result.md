@@ -113,7 +113,7 @@ In order. Steps 14-19 of the plan.
 - **Follow-up on 2026-09-14:** the Terraform root moved from `infra/loady-vm/` to `infra/`, keeping
   its local state and initialized providers. An apply now replaces a colliding unmanaged Proxmox
   image, requires the Git key, and fails unless the C# restore/build, frontend install, and Compose
-  image pull all succeed. Following Costfluent's `cf-tfd` pattern, `ld-tfd` opens the Bitwarden
+  image pull all succeed. Following the kirilloak `cf-tfd` pattern, `ld-tfd` opens the Bitwarden
   session before entering the rebuild script, clears LAN and Tailscale host keys, and waits for the
   post-bootstrap reboot to finish, so creation and rebuilding require only that command. The
   bootstrap also verifies the VM login shell exposes the operational `ld-*` functions, including
