@@ -10,6 +10,10 @@ The division of labour is fixed: Docker runs the backing services only — SQL S
 emulator, Redis, Azurite and the APIM proxy — and Rider over SSH runs every application. Nothing
 about the containers moves into Rider's run list.
 
+One terminal command survives on the stack side: `ld-reset`, which wipes and brings the containers
+up. Everything it currently does past that — build, seed, start the hosts — is Rider's job now, and
+the `ld-*` commands that did it are retired rather than left as a second way to do the same thing.
+
 Rider is also the only IDE on the VM, so the founder's WebStorm frontend profiles move into the same
 Rider project as the backend's.
 
@@ -19,8 +23,11 @@ Rider project as the backend's.
 - `backend/.run` in the checkout is a symlink to that directory, and
   `git -C ~/loady-one status --short` is empty.
 - Rider lists the configurations on open, with no import step.
-- Once the containers are up, every application runs from Rider: the seeders, the five default
-  hosts, the six public ones, and the frontend in each of its modes.
+- `ld-reset` is the only stack command left: it wipes, pulls, brings the containers up, waits for
+  them and installs the Cosmos certificate, and stops there.
+- Once it has run, every application runs from Rider: the seeders, the five default hosts, the six
+  public ones, and the frontend in each of its modes.
+- Every port in the table in `docs/remote-development.md` is forwarded to the Mac automatically.
 - The four WebStorm frontend profiles run in Rider with their behaviour unchanged.
 - `backend-api-sso` signs in through the dev B2C tenant while reading and writing the VM's local
   SQL Server, Cosmos emulator, Redis and Azurite.
@@ -60,26 +67,33 @@ are prefixed `fe-` because one Rider project now holds both halves and the WebSt
 survive the merge — `dev` alone is ambiguous beside a backend configuration, and `local-dev-sso` is
 the name of the backend one. Renaming back is one `name=` attribute per file.
 
-### The containers stay in the terminal
+### One command, then Rider
 
-`ld-dev.sh containers` over ssh brings up the five services, waits for SQL Server and the Cosmos
-emulator to answer, installs the emulator's fresh certificate into the trust store, and claims the
-`loadystack` slot. None of that belongs behind a Rider button: it is machine state, it is the same
-for every worktree and every branch, and it is already one command.
+`ld-reset` absorbs what `ld-dev.sh containers` does — compose up, the readiness waits for SQL Server
+and the Cosmos emulator, the certificate install, the `loadystack` claim — and ends there instead of
+calling `ld-dev.sh start`. A cold start is then `ld-reset` over ssh, then `seeder`,
+`test-data-seeder` and `stack` in Rider. Rider cannot express that order in one button anyway,
+because a compound has no ordering.
 
-So a cold start is `ld-dev.sh containers` in a terminal, then `seeder`, `test-data-seeder` and
-`stack` in Rider. Step 6 puts that order in the README; Rider cannot express it in one button
-anyway, because a compound has no ordering.
+`scripts/ld-dev.sh` is deleted rather than shrunk. Once the hosts move to Rider, everything left in
+it is either container work that belongs in the one script that already wipes and recreates them, or
+a process manager Rider replaces: `start_hosts`, `stop_hosts`, `running`, the pid and log directory,
+`logs`, `status`, `build` and `seed`. Keeping it as a second way to run the stack is exactly the
+duplication this change is for.
 
-### `ld-start` afterwards
+Retired with it, from `scripts/loady-shell.zsh`: `ld-start`, `ld-stop`, `ld-restart`, `ld-status`,
+`ld-logs`, `ld-build`, `ld-seed` and `ld-fe`. Rider's run panel is the status, its consoles are the
+logs, its Build method is the build, and the four `fe-*` configurations are `ld-fe` with more modes
+than it had.
 
-`ld-start` still works and is still the right thing when running the stack headless over ssh, but it
-is no longer the normal path and the two must not overlap. It starts the same hosts on the same ports
-detached, so running it while Rider holds them is a bind failure on every one. The reverse matters
-more: `ld-dev.sh stop` kills only the pids it recorded, so it cannot stop a host Rider started, and
-`ld-status` reports Rider's hosts as stopped because it reads that same pid directory. Neither is a
-bug to fix here — `ld-dev.sh` is correct about the processes it owns — but step 7 documents it,
-because the first instinct on seeing `stopped` is to start them again.
+Kept: `ld-reset`, `ld-cosmos-cert`, the VM commands (`ld-vm`, `ld-up`, `ld-down`, `ld-tfd`), the
+worktree commands (`ld-stn`, `ld-st`, `ld-stl`, `ld-str`), the migration commands (`ld-add`,
+`ld-update`, `ld-remove`, `ld-mig`), and `slot.sh`, which `ld-reset` still claims so a second
+worktree gets a clear refusal rather than a port collision.
+
+What is lost, stated rather than discovered: nothing brings the containers back up without wiping
+them. Docker's `restart: unless-stopped` covers a reboot, which is the only way they stop now that
+`ld-stop` is gone, so the gap is narrow — and `ld-reset` is the answer if it is ever hit.
 
 ## The staggered start
 
@@ -89,7 +103,7 @@ bind if they all start at once."* It inherits this from `backend/backend.ps1`.
 
 **A Rider compound starts every member at once and offers no delay and no ordering.** So `backend`
 and `stack` run head-first into the one thing the existing launcher goes out of its way to avoid.
-This is the plan's main risk and it is checked early, in step 3, not discovered in step 5.
+This is the plan's main risk and it is checked early, in step 3, not discovered in step 7.
 
 Three outcomes, and the work that follows each:
 
@@ -97,15 +111,44 @@ Three outcomes, and the work that follows each:
    window per host on Windows, and the failure it avoids may be a Core Tools extraction race that a
    warm `~/.azure-functions-core-tools` no longer has. Then the compounds stand as written.
 2. **It fails intermittently.** Then `stack` keeps only what a session actually needs — commonly
-   `Loady.Backend.Api`, `Loady.Events.Api` and the frontend — and the rest are started by hand or
-   left to `ld-dev.sh start-hosts`, which already staggers correctly. The compound is a convenience,
-   not the deliverable.
-3. **It fails every time.** Then the compounds are dropped and the hosts are started individually,
-   in the order the manifest gives. `ld-dev.sh start-hosts` remains available over ssh for the ones
-   not being debugged, at the cost of those not being debuggable. That is a smaller loss than it
-   sounds: running eleven hosts under the debugger at once was never the point.
+   `Loady.Backend.Api`, `Loady.Events.Api` and the frontend — and the rest are started from Rider
+   individually when a task needs them. The compound is a convenience, not the deliverable.
+3. **It fails every time.** Then the compounds are dropped and the hosts are started individually
+   in manifest order, which is a few extra clicks at the start of a session and nothing else.
+   Running eleven hosts under the debugger at once was never the point, and step 5 should then keep
+   `compose/processes.json`'s `wait` field as the record of why the order matters.
 
 Deciding this before step 3 would be guessing. The step is cheap and the answer is binary.
+
+## Binding and forwarding
+
+The founder's requirement is that everything be reachable from the Mac. The way to get that is
+**not** to bind the hosts to `127.0.0.1`, and this is worth stating precisely because the intuition
+points the wrong way.
+
+A forwarded port — Rider's forwarding or `ssh -L` — is a tunnel whose far end connects to
+`localhost:<port>` *on the VM*. A socket bound to `0.0.0.0` accepts that connection exactly as a
+loopback-bound one does. So `0.0.0.0` is forwardable, and binding `127.0.0.1` buys nothing on the
+Mac side while breaking the container side: nginx in the `apim` container reaches the hosts across
+the Docker bridge, from an address that is not loopback, and a loopback-only host answers it with
+nothing. `docs/remote-development.md` records this as the reason every host is started with
+`ASPNETCORE_URLS=http://0.0.0.0:<port>`, and it is why `scripts/ld-dev.sh` exports it.
+
+It is also not an exposure. The Docker daemon is configured to publish to `127.0.0.1`, the compose
+file binds `127.0.0.1` explicitly, ufw denies inbound except SSH and the bridge back to the host
+ports, and there is no router port-forward to the VM. `0.0.0.0` on this machine means the Docker
+bridge and loopback, and nothing else.
+
+So the run configurations keep `0.0.0.0`, and the reachability requirement is met the other way: by
+forwarding every port rather than only six. `dotfiles/rider/forwardedPorts.xml` currently tracks
+`8080`, `7000`, `7160`, `7296`, `1433` and `6379`; it grows to the whole table in
+`docs/remote-development.md` — the eleven host ports, `8080`, `7000`, `1433`, `6379`, `8081`, `1234`
+and `10000`-`10002`, twenty entries. `sync.sh` already carries that file both ways and
+`--seed-worktree` already puts it into every new worktree, so nothing new is needed to distribute
+it.
+
+The Docker ports need no change: the compose file publishes them on `127.0.0.1`, which is precisely
+what a tunnel connects to. They are forwardable today and the only thing missing was the entries.
 
 ## Where they come from
 
@@ -197,8 +240,8 @@ out of scope here.
 
 ## Blockers
 
-The VM is not reachable (`ssh loady-vm` times out), so steps 3 onward wait on it. Steps 1 and 2 do
-not.
+The VM is not reachable (`ssh loady-vm` times out), so steps 3 onward wait on it. Steps 1, 2 and 6
+do not.
 
 ## Steps
 
@@ -206,7 +249,9 @@ not.
    `backend-api-sso`, the four frontend ones, the two seeders, and the three compounds.
    Why: this repository is where they are tracked, and their XML shapes are in hand.
    Depends on: nothing.
-   Notes: `ASPNETCORE_URLS=http://0.0.0.0:<port>` on every host including the SSO one;
+   Notes: `ASPNETCORE_URLS=http://0.0.0.0:<port>` on every host including the SSO one, for the
+   reason the *Binding and forwarding* section gives — not `127.0.0.1`, which would break APIM
+   without helping the Mac;
    `AZURE_FUNCTIONS_ENVIRONMENT=Localhost` and `EnvironmentName=Localhost` on the ten local-mode
    hosts and both seeders, matching `scripts/ld-dev.sh`; the seeders get the working directory and
    arguments `ld-dev.sh seed` uses; the four frontend files change only `name` and `package-json`.
@@ -234,11 +279,11 @@ not.
    compound from cold, three times.
    Why: the 20-second stagger in `ld-dev.sh` exists because these hosts are documented to fail when
    started at once, and a Rider compound cannot stagger. Everything about `backend` and `stack`
-   depends on the answer, and finding out in step 5 would mean rewriting the compounds then.
-   Depends on: steps 1 and 2, and `ld-dev.sh containers` having been run over ssh.
+   depends on the answer, and finding out in step 7 would mean rewriting the compounds then.
+   Depends on: steps 1 and 2, and the containers being up.
    Verification: all five hosts bind and answer on their ports, three runs out of three. If any run
    fails, read the failing host's console for the actual error before concluding — a port already
-   held by an `ld-start` host is a different problem with the same symptom. Then take the branch the
+   held by a host from an earlier `ld-start` is a different problem with the same symptom. Then take the branch the
    *The staggered start* section sets out, and amend this plan before continuing.
 
 4. **Confirm the plugins, the interpreter and the link.** With Rider connected: the Azure Toolkit
@@ -253,13 +298,39 @@ not.
    missing the founder installs it. If the interpreter does not resolve, pin the VM's node path in
    the four npm files and record it in `dotfiles/rider/README.md`.
 
-5. **Run every application from Rider, cold.** `ld-dev.sh containers` over ssh first, then
+5. **Retire the app commands.** Delete `scripts/ld-dev.sh`; move its container work into
+   `scripts/ld-reset.sh`, which drops `--public` and ends at containers-ready; remove `ld-start`,
+   `ld-stop`, `ld-restart`, `ld-status`, `ld-logs`, `ld-build`, `ld-seed` and `ld-fe` from
+   `scripts/loady-shell.zsh`.
+   Why: two ways to run the same stack is the complexity this change exists to remove, and the
+   second way silently disagrees with the first — `ld-status` reads a pid directory Rider never
+   writes to, so it would report every Rider-started host as stopped.
+   Depends on: step 4, so the configurations are known to work before their replacement is deleted.
+   Notes: every file that names one of these commands has to follow, and there are more than the
+   scripts themselves — `scripts/ld-stream.sh` (the slot line in `new` and the `ld-stop` hint in
+   `remove`), `scripts/slot.sh`, `scripts/lib.sh` and `scripts/cosmos-cert.sh` in comments, the
+   `ld-*` row in `AGENTS.md`'s knowledge table, and `docs/remote-development.md` throughout.
+   `compose/processes.json` keeps its names and ports — bootstrap's ufw rules and the Rider
+   configurations both depend on them — but its `wait` field describes a stagger nothing performs
+   any more; keep or drop it according to what step 3 found.
+   Verification: `shellcheck scripts/*.sh`, `zsh -n scripts/loady-shell.zsh`, a fresh login shell
+   offering the kept commands and none of the retired ones, and `ld-reset` from cold leaving five
+   healthy containers and no function host.
+
+6. **Forward every port.** Extend `dotfiles/rider/forwardedPorts.xml` from six entries to the twenty
+   the port table lists.
+   Why: the reachability requirement, met the way that does not break APIM.
+   Depends on: nothing; independent of the rest and doable while the VM is down.
+   Verification: `xmllint --noout dotfiles/rider/forwardedPorts.xml`; after a Rider reconnect the
+   Ports tool window lists all twenty; `sync.sh --check` reports no conflict on the file.
+
+7. **Run every application from Rider, cold.** `ld-reset` over ssh first, then
    `seeder`, `test-data-seeder`, `stack` and `public-api` in Rider. Set a breakpoint in a `Loady.Backend.Api` function and hit it through the
    frontend. Also `fe-company-admin` and `fe-dev`, the latter needing none of the above and so
    proving the npm configurations in isolation.
    Why: this is the criterion the whole plan is for, and the `ASPNETCORE_URLS` and
    `$PROJECT_DIR$/../` changes in step 1 are exactly the kind that look right and are not.
-   Depends on: step 4, and step 3's answer having been applied to the compounds.
+   Depends on: steps 5 and 6, and step 3's answer having been applied to the compounds.
    Notes: the npm configurations run `yarn start` only, where `ld-fe` also runs
    `yarn install --frozen-lockfile`. After a lockfile change the first Rider run fails until
    `yarn install` has been run once; decide then whether that belongs as a before-launch step or a
@@ -270,28 +341,29 @@ not.
    Verification: the frontend loads at `http://localhost:8080` and its calls reach APIM at 7000; the
    breakpoint binds and hits; `git -C ~/loady-one status --short` is empty.
 
-6. **Run the SSO pair.** `az login --use-device-code` on the VM first, then
+8. **Run the SSO pair.** `az login --use-device-code` on the VM first, then
    `backend-api-sso + fe-sso`, with `Loady.Backend.Api` stopped so 7160 is free, and sign in through
    the dev B2C tenant.
    Why: this is the configuration with the most that can go wrong, and its whole point is real auth
    over local data.
-   Depends on: step 5.
+   Depends on: step 7.
    Verification: sign-in completes and the frontend loads data; a row the test data seeder wrote is
    visible, proving the data is local and not the dev environment's; `ld-logs Loady.Backend.Api`
    shows no Key Vault or Search credential failure.
 
-7. **Document.** A `## Run configurations` section in `dotfiles/README.md` naming the directory, the
+9. **Document.** A `## Run configurations` section in `dotfiles/README.md` naming the directory, the
    symlink and `link-agent-files.sh` as its placer — and correcting that file's "What is synced"
    table, which otherwise implies everything under `dotfiles/` goes through `sync.sh`. In
-   `dotfiles/rider/README.md`: the cold-start order beginning with `ld-dev.sh containers`, the two
+   `dotfiles/rider/README.md`: the cold-start order beginning with `ld-reset`, the two
    frontend modes, `az login` as a manual
    prerequisite for the SSO pair, and whatever step 3 decided about the compounds. In
-   `docs/remote-development.md`: one line pointing there, and the division of labour — Docker for the
-   backing services, Rider for every application — with `ld-start` kept for headless use and the
-   caveat that `ld-dev.sh stop` and `ld-status` cannot see a Rider-started host. One line in `scripts/link-agent-files.sh`'s
+   `docs/remote-development.md`: the division of labour — Docker for the backing services, Rider for
+   every application, `ld-reset` the one command between them — the corrected forwarding column now
+   that every port is tracked, and the removal of every reference to a retired command. One line in `scripts/link-agent-files.sh`'s
    header, which says it places the agent files and will then place more.
-   Why: `AGENTS.md` gives one owner per fact, and this change makes three existing documents wrong.
-   Depends on: step 6.
+   Why: `AGENTS.md` gives one owner per fact, and this change makes several existing documents
+   wrong at once — the command surface, the ports and the way the stack is run.
+   Depends on: step 8.
    Verification: read back; no duplicated port table, a link instead.
 
 ## Assumptions
@@ -303,11 +375,11 @@ not.
   one part of the frontend migration with no prior art on this machine. Step 4 checks it.
 - Eleven function hosts, a dev server and Rider's indexer fit the VM. `infra/bootstrap.sh:694` raised
   the file-descriptor limit for exactly this shape, so it was anticipated; memory under all eleven at
-  once has not been measured, and step 5 is the first time it will be.
+  once has not been measured, and step 7 is the first time it will be.
 - `Loady.Backend.Api`'s `Dev` launch profile still means the dev B2C tenant. It is `loady-one`'s file
   and the team may change it; the configuration names the profile rather than restating it, so it
   follows such a change rather than drifting from it.
-- Debugging a function host under the Functions runtime works in remote-development mode. Step 5
+- Debugging a function host under the Functions runtime works in remote-development mode. Step 7
   tests it; if attach fails the configurations still run and the limitation gets documented.
 
 ## Risks
@@ -316,10 +388,10 @@ not.
 - `func` is on the VM's PATH for the login shell, but Rider's backend may not inherit it. The symptom
   in step 4 is a configuration that cannot find Core Tools; the fix is the toolkit's own Core Tools
   path setting, which then belongs in `dotfiles/rider/README.md` as a manual setting.
-- Running the stack from Rider and from `ld-start` at once is a port collision on every host, and
-  `backend-api-sso` collides with `Loady.Backend.Api` — both are 7160. Bind failures, not corruption,
-  but `ld-status` will report Rider's hosts as stopped, so the founder's first instinct will be to
-  start them again. Step 7 documents it.
+- `backend-api-sso` collides with `Loady.Backend.Api` — both are 7160 and only one may run. A bind
+  failure, not corruption,
+  but nothing arbitrates it once the hosts are Rider's. Step 5 removes the command that would
+  otherwise collide.
 - The SSO configuration writes to real dev Azure resources for anything not overridden: Key Vault is
   read-only, but Azure Search and the blob accounts are shared with the team's dev environment. Worth
   knowing before running a seeder while it is up.
