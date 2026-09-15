@@ -1,4 +1,4 @@
-# loady-one
+``# loady-one
 
 The Loady product repository. The team owns it; the founder is one developer on it.
 
@@ -28,6 +28,14 @@ belongs in a file inside this checkout. That knowledge is in `~/loady-vm`, and
 
 A directory with no instruction file of its own is not undocumented: read its `README.md` and match
 what the code already does.
+
+## Frontend development
+
+1. Use the Composition API with
+   [`<script setup>`](https://vuejs.org/api/sfc-script-setup.html) for new Vue components and files.
+2. Use the shared `ErrorMessage` component instead of custom error elements and CSS.
+3. Add and preserve stable `data-qa-id` attributes on inputs, buttons and other elements used by
+   integration tests, for example `data-qa-id="login-email-input"`.
 
 ## Working in more than one of them
 
