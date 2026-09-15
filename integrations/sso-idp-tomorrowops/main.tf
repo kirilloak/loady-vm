@@ -29,6 +29,8 @@ resource "azuread_user" "test" {
 
   user_principal_name   = each.key
   display_name          = var.test_users[each.key].display_name
+  given_name            = var.test_users[each.key].given_name
+  surname               = var.test_users[each.key].surname
   password              = var.test_users[each.key].password
   force_password_change = var.test_users[each.key].force_password_change
 }

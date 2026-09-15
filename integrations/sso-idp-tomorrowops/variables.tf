@@ -58,6 +58,8 @@ variable "test_users" {
   description = "Optional test users keyed by user principal name. Passwords land in Terraform state, so they are supplied from an untracked tfvars file and never defaulted here."
   type = map(object({
     display_name          = string
+    given_name            = optional(string)
+    surname               = optional(string)
     password              = string
     force_password_change = optional(bool, false)
   }))
