@@ -3,7 +3,7 @@
 #
 # `git worktree add` writes its metadata under .git/worktrees/ and never into the working tree, so
 # nothing a teammate pulls changes (AGENTS.md rule 1). Linked worktrees share the main checkout's
-# .git/info/exclude, so the exclusions link-agent-files.sh may add cover every worktree at once.
+# .git/info/exclude, so the exclusions sync-agent-files.sh may add cover every worktree at once.
 #
 # What a worktree does not give you is a second stack: the compose services pin container names and
 # host ports, so only the worktree holding the `loadystack` slot can run one. And there is one SQL
@@ -62,7 +62,7 @@ case "$command" in
 
     # The things a fresh worktree needs to be usable: the agent instructions and shared Rider run
     # configurations, plus Rider's port mapping in the per-project .idea directory.
-    "$HERE/link-agent-files.sh" "$path"
+    "$HERE/sync-agent-files.sh" "$path"
     "$(ld_vm_repo)/dotfiles/sync.sh" --seed-worktree "$path" || \
       ld_warn "could not seed the Rider files into the worktree; run dotfiles/sync.sh by hand"
 

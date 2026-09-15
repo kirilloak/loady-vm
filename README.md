@@ -7,7 +7,7 @@ thin client — Rider's UI, a browser, a terminal.
 Everything about the setup lives here, so that nothing about it lives in `loady-one`.
 
 ```
-agents/          the Loady agent instruction files, symlinked into the checkout and its worktrees
+agents/          the Loady agent instruction files, synced into the checkout and its worktrees
 compose/         local services and the function-host manifest
 docs/            architecture, Rider, ports, boundaries, secrets
 dotfiles/        agent and Rider configuration on the VM, with its own sync
@@ -76,7 +76,7 @@ reservation that prevents it.
 | `ld-cosmos-cert [--print]`                               | trust the Cosmos emulator's certificate (`ld-reset` does it already) |
 | `ld-add`, `ld-update`, `ld-remove`                       | EF migrations                                                        |
 | `ld-stn`, `ld-st`, `ld-stl`, `ld-str`                    | worktrees                                                            |
-| `ld-agents [--all]`                                      | link the agent files and Rider run configurations into a checkout    |
+| `ld-agents [--all]`                                      | sync the agent files into a checkout, or into every one of them      |
 
 ## One thing to know before using it
 

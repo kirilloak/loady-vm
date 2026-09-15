@@ -2,11 +2,11 @@
 
 The Loady product repository. The team owns it; the founder is one developer on it.
 
-This file and the `CLAUDE.md` beside it are two names for one file,
-`~/loady-vm/agents/loady-one/AGENTS.md`, symlinked in and excluded locally, so they are invisible
-to the repository and to everyone else working in it. Codex reads the first name and Claude the
-second. Editing either is correct: the change lands in the private repository, under version
-control.
+This file holds the instructions and the `CLAUDE.md` beside it is one line, `@AGENTS.md`, which
+imports it. Codex reads the first, Claude the second. Both are excluded locally, so they are
+invisible to the repository and to everyone else working in it, and both are synced every minute
+against `~/loady-vm/agents/loady-one/`. Editing either here is correct: the edit is carried back
+into the private repository, under version control, where the founder commits it.
 
 Nothing about the development machine, the VM, Rider, Docker, the `ld-*` commands or this setup
 belongs in a file inside this checkout. That knowledge is in `~/loady-vm`, and

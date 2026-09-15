@@ -19,10 +19,10 @@ tracked file here equal to its live counterpart.
 Never synced: `auth.json`, sessions, history, memories, plugins, and anything under
 `~/.claude/projects`.
 
-That table is the machine-wide context both tools load on every session. Project context is not
-synced at all: the instruction files in `~/loady-one` are symlinks into `agents/` in this
-repository, placed by `scripts/link-agent-files.sh` and kept in place by its own crontab line.
-There is one copy of each file and nothing to reconcile.
+That table is the machine-wide context both tools load on every session. Project context is synced
+the same way but by a different script: `scripts/sync-agent-files.sh` keeps the instruction files in
+`~/loady-one` equal to `agents/` in this repository, in both directions and with the same
+conflict rule, from its own crontab line every minute.
 
 ## The VM only
 
@@ -80,12 +80,14 @@ the change syncs back here.
 ## Rider run configurations
 
 `rider/run/*.run.xml` holds the application run configurations shared by every checkout and
-worktree. `scripts/link-agent-files.sh` places that directory at `backend/.run` as a symlink and
-adds a local Git exclusion when needed. Rider edits therefore land directly in this repository;
-these files do not pass through `sync.sh`.
+worktree. `scripts/sync-agent-files.sh` syncs that directory into each checkout at `backend/.run`,
+file by file and in both directions, and adds a local Git exclusion when needed. A configuration
+Rider writes there is carried back into this repository; a new one added here appears in every
+checkout on the next pass, and one deleted on either side goes from both. These files do not pass
+through `sync.sh`.
 
-Run `ld-agents` in an existing checkout to create or refresh the link. `ld-stn` does this
-automatically for a new worktree.
+Run `ld-agents` in an existing checkout to sync it now. `ld-stn` does this automatically for a new
+worktree, and a crontab line does it every minute.
 
 ## Manual configuration
 

@@ -2,7 +2,7 @@
 
 **Plan:** [plans/2026_09_15_agent_files_agents_md_and_cron.md](2026_09_15_agent_files_agents_md_and_cron.md)
 
-**Status:** complete, with one design change the plan did not foresee. Claude does not follow an
+**Status:** complete and live on the VM, with one design change the plan did not foresee. Claude does not follow an
 `@AGENTS.md` import whose target resolves outside the project directory, so the checkout's
 `CLAUDE.md` is a second name for `AGENTS.md` rather than a one-line pointer to it. Measured, not
 inferred; the cases are below. Everything else landed as planned.
@@ -61,30 +61,11 @@ copying the content into the team checkout as a real file, which rule 1 rules ou
 
 ## Manual actions for the founder
 
-1. **Commit and push.** Nothing here commits (rule 2). The same working-tree changes now exist in
-   both checkouts of this repository, byte for byte: on the Mac, where they were written, and on the
-   VM, which needed them to run and verify. Commit and push from one, then discard the other's copy
-   before pulling there. Rule 5 prefers the VM.
+1. **Commit this file.** Everything else was committed and pushed as `937c0c9` and pulled on the
+   VM; only this updated ledger is uncommitted. Suggested message: `Record the bootstrap re-run and
+   the VM reconciliation`.
 
-   Discarding means, in the other checkout: `git restore` the six modified tracked files, `git
-   restore --staged agents` to undo the staged renames, and delete the untracked
-   `agents/loady-one/`, `agents/*/AGENTS.md` and this result file. Check `git status --short` in
-   that checkout first and read what you are about to remove; the VM's copy is only safe to delete
-   once the Mac's is pushed, and the other way round.
-
-   Suggested message:
-
-   ```
-   Link agent instructions into the checkout root, backend and infra
-
-   Rename the two instruction files to AGENTS.md, add one for the checkout
-   itself, and link both AGENTS.md and CLAUDE.md in each of the three
-   directories to it, so Claude and Codex load the same project context
-   wherever a session starts. A crontab line re-establishes the links every
-   minute, in the checkout and in every worktree.
-   ```
-
-2. **Nothing else.** The cron line, the links and the global files are already in place on the VM.
+The earlier action, committing the work itself, is done.
 
 ## Notes
 
@@ -97,6 +78,17 @@ copying the content into the team checkout as a real file, which rule 1 rules ou
 - `frontend/CLAUDE.md` is a real file the team tracks. It is not in the project table, and the
   script refuses to replace a real file in any case; its checksum is unchanged.
 - The Mac's fallback checkout was relinked too, because the rename left its old links dangling.
+- **The two checkouts are reconciled.** The work was written on the Mac and rsynced to the VM so the
+  VM could run and verify it; the founder then committed and pushed `937c0c9` from the Mac. The VM's
+  redundant copies were removed after checking each one byte for byte against `origin/main`
+  (`git hash-object` vs `git rev-parse origin/main:<path>`, all identical, and the two renamed-away
+  `CLAUDE.md` files absent from `origin/main` too), and the checkout fast-forwarded `d99f86b..937c0c9`.
+  Both trees are clean.
+- **One cron failure, at 08:12:01, now fixed.** A `git restore` in the VM's checkout rolled
+  `scripts/link-agent-files.sh` back to the pre-change version while the new crontab line was
+  already installed, so cron called the old script with `--all` and it read that as a checkout path:
+  `ld-agents: not a git checkout: --all`. One log line, no effect on the links. The pull put the new
+  script back and the log has been silent since.
 
 ## Verification
 
@@ -120,6 +112,11 @@ Every command below was run and its result is what is recorded. Claude checks ar
 | Criterion 0, Codex, same three directories | identical answers |
 | `dotfiles/sync.sh` after editing `instructions.md`, then `--check` | wrote `~/.claude/CLAUDE.md` and `~/.codex/AGENTS.md`, no conflict |
 | `git -C ~/loady-one status --porcelain`, VM and Mac, at the end | empty on both |
+| `infra/setup.sh` — full bootstrap re-run on the VM, after the pull | exit 0, "Done in 288s: the VM matches this script"; the agent-files stage linked `~/loady-one` with the new script and both `install` calls reported "already installed" |
+| `crontab -l` after that run | still exactly two lines, no duplicate |
+| Criterion 0 re-checked after the bootstrap, Claude, three directories | project and global headings both present in all three |
+| Criterion 0 re-checked after the bootstrap, Codex, three directories | the same; asked in `infra/` for a fact only that file carries, it answered `loadydevsa` for the qa state account and listed `~/.codex/AGENTS.md`, `~/loady-one/AGENTS.md`, `~/loady-one/backend/AGENTS.md` and `~/loady-one/infra/AGENTS.md` as its loaded documents |
+| `git -C ~/loady-vm status --short` on the VM, at the end | empty, at `937c0c9` |
 
 Not run:
 

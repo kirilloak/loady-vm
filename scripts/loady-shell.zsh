@@ -69,7 +69,7 @@ ld-mig()    { ld_run scripts/ld-migrate.sh list "$@"; }
 # ---------------------------------------------------------------------------------------------
 # Worktrees
 # ---------------------------------------------------------------------------------------------
-ld-agents() { ld_run scripts/link-agent-files.sh "$@"; }
+ld-agents() { ld_run scripts/sync-agent-files.sh "$@"; }
 ld-stl()    { ld_run scripts/ld-stream.sh list "$@"; }
 ld-str()    { ld_run scripts/ld-stream.sh remove "$@"; }
 

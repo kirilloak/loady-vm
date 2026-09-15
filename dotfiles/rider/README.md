@@ -24,7 +24,7 @@ The project path is `/home/dev/loady-one/backend/Loady.slnx`. Confirm the direct
 for its project files: it should be `backend/.idea/.idea.Loady/.idea/`, and if it is not, correct
 `RIDER_DIR` in `dotfiles/sync.sh` to match — the port mapping is synced through that path.
 
-`backend/.run` is linked to this repository by `scripts/link-agent-files.sh`. Rider should list 21
+`backend/.run` is synced against this repository by `scripts/sync-agent-files.sh`. Rider should list 21
 shared configurations with the `be-`, `fe-` and `stack-` prefixes. The Azure Toolkit plugin and
 Rider's JavaScript and Node.js support must be enabled; the four `fe-*` configurations use the
 project Node interpreter and Yarn.

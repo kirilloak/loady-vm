@@ -67,7 +67,7 @@ optional slug, on its own or behind `feature/`, `bugfix/` or `chore/`. `--any` i
 Three things follow from the machine:
 
 1. **`loady-one` stays clean.** `git worktree add` writes only under `.git/worktrees/`, and the
-   agent files and Rider run configurations are symlinks into `loady-vm` covered by
+   agent files and the Rider run configurations are synced from `loady-vm` and covered by
    `.git/info/exclude`, which is local and never pushed. Nothing a teammate pulls changes.
 2. **Only one stream runs the stack.** Every container pins a name and a host port and the function
    hosts bind fixed ports, so `ld-reset` claims a `loadystack` slot and a second one is refused by
@@ -92,7 +92,7 @@ ld-cosmos-cert      # refresh Cosmos trust manually; ld-reset already does it
 Docker runs SQL Server, Cosmos DB, Redis, Azurite and the APIM proxy, and `ld-reset` verifies the
 Azure CLI session and runs both seeders after the services are ready. Rider runs the eleven function
 hosts and four frontend modes and keeps both seeders available for manual reruns. The shared
-configurations live in `dotfiles/rider/run/` and `scripts/link-agent-files.sh` links them into each
+configurations live in `dotfiles/rider/run/` and `scripts/sync-agent-files.sh` syncs them into each
 checkout at `backend/.run`. `compose/processes.json` remains the source of truth for the host set and
 ports.
 

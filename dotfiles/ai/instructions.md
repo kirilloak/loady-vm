@@ -34,11 +34,12 @@ fallback checkout for when this host is down. Everything about this machine — 
 installed, how it is rebuilt — is in `~/loady-vm`, which is a private repository. Nothing about it
 belongs in `~/loady-one`, which the team owns.
 
-`~/loady-one` carries `AGENTS.md` and `CLAUDE.md` at its root, in `backend/` and in `infra/`. Each
-pair is two names for one file under `~/loady-vm/agents/`, so Codex and Claude read the same
-instructions. Editing any of them is correct and lands in the private repository; that is
-deliberate. A crontab line puts back one that goes missing, in the checkout and in every
-worktree.
+`~/loady-one` carries `AGENTS.md` and `CLAUDE.md` at its root, in `backend/` and in `infra/`.
+`AGENTS.md` holds the instructions and `CLAUDE.md` is one line importing it, so Codex and Claude
+read the same thing. Every one of them is synced both ways, every minute, against
+`~/loady-vm/agents/`. Editing one where you find it is correct: the edit is carried into the
+private repository for the founder to commit. Changing the same file on both sides between syncs
+is a conflict, which writes nothing and says so.
 
 ## Working here
 
