@@ -42,7 +42,7 @@ through `ld-pr`, so these are file-level, not scroll-to-that-exact-comment links
 | I | `login.component.vue` — `isWelcome` via `route.query`               | Done     | Anton         | [link](https://dev.azure.com/Loady-Logistics/loady/_git/loady-one/pullrequest/9819?path=%2Ffrontend%2Fsrc%2Fapp%2Fauth%2Fcomponents%2Flogin.component.vue&_a=files)                                        |
 | J | `login.component.vue` — description text color                      | Done     | Anton         | [link](https://dev.azure.com/Loady-Logistics/loady/_git/loady-one/pullrequest/9819?path=%2Ffrontend%2Fsrc%2Fapp%2Fauth%2Fcomponents%2Flogin.component.vue&_a=files)                                        |
 | K | `SsoResolve.cs` — GET with query param, not body-deserialized query | Done     | Nelia         | [link](https://dev.azure.com/Loady-Logistics/loady/_git/loady-one/pullrequest/9819?path=%2Fbackend%2Fsrc%2FDomains%2FLoady.Backend.Api%2FAuthentication%2FSsoResolve.cs&_a=files)                          |
-| L | `SqlCompany.cs` — SSO columns vs. separate table                    | Not done | Nelia + Heinz | [link](https://dev.azure.com/Loady-Logistics/loady/_git/loady-one/pullrequest/9819?path=%2Fbackend%2Fsrc%2FShared%2FLoady.Relational.Domain%2FAggregateModels%2FCompanyAggregate%2FSqlCompany.cs&_a=files) |
+| L | `SqlCompany.cs` — SSO columns vs. separate table                    | Done     | Nelia + Heinz | [link](https://dev.azure.com/Loady-Logistics/loady/_git/loady-one/pullrequest/9819?path=%2Fbackend%2Fsrc%2FShared%2FLoady.Relational.Domain%2FAggregateModels%2FCompanyAggregate%2FSqlCompany.cs&_a=files) |
 | M | general, 2026-09-11 — existing B2C local accounts + inactivity job  | Not done | Heinz         | [link](https://dev.azure.com/Loady-Logistics/loady/_git/loady-one/pullrequest/9819?_a=overview)                                                                                                            |
 
 Since D, E, F, G, H, I and J all land on the same `login.component.vue` thread link, use the PR's own file comment list
@@ -75,9 +75,10 @@ to tell them apart — Anton posted them as separate comments a few minutes apar
 - **K:** Fixed — `sso/resolve` is now `GET /sso/resolve?email=...`, built via `GetRequiredQueryParameter` instead of
   deserializing the body into the MediatR query directly (matches the `DictionaryGetByIds` pattern). Frontend
   `identity-provider.service.ts` updated to call it as a GET.
-- **L:** Not done — needs a decision first: move `SsoEmailDomains` to a real table with a unique index (keeps domain 1:1
-  with company), or decouple domain-to-provider mapping from Company entirely (addresses the BASF SE/NA shared-domain
-  point). See "Step 5" in this plan for the tradeoffs; will implement once you pick one.
+- **L:** Fixed — SSO domain configuration is now a standalone `SqlSsoIdentityProvider` table (`Domain` unique-indexed,
+  `DomainHint`, `Issuer`, `IsEnabled`), decoupled from `Company` entirely, per
+  `plans/2026_09_15_sso_domain_storage_option.md`. `SqlCompany` no longer has any SSO fields. Migration
+  `20260827141726_AddSsoConfiguration.cs` was intentionally left untouched — you're recreating it by hand.
 - **M:** Investigated, not code-fixed — `UserService.InactivateUsersAsync` already excludes SSO-configured domains
   before inactivating anyone, so the disable/delete pipeline is already shielded for domains that were SSO-enabled
   before a user went inactive. Open edge case: a user already inactive when their domain later gets SSO-enabled isn't
@@ -202,7 +203,10 @@ the shape:
   `dotnet test src/Shared/Loady.Services.UnitTests --filter "ResolveIdentityProviderQueryValidatorTests"`;
   `vue-cli-service lint` on the frontend service; manual round trip against local func host if time allows.
 
-### Step 5 — SSO domain configuration storage (comment L) — **needs your call before implementing**
+### Step 5 — SSO domain configuration storage (comment L) — done, see `plans/2026_09_15_sso_domain_storage_option.md`
+
+Superseded by that plan: implemented as a standalone `SqlSsoIdentityProvider` table, decoupled from `Company`. Kept
+below for the historical record of the tradeoff.
 
 This is the one comment that changes a decision already made and implemented, not just a code-quality nit, so it needs a
 decision before a step can be written concretely. Options, with what each costs:
