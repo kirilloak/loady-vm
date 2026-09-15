@@ -68,7 +68,7 @@ variable "test_users" {
       display_name = "SSO Test User"
       given_name   = "SSO"
       surname      = "Test"
-      password     = "REPLACE_ME_BEFORE_APPLYING"
+      password     = "DZwYiku6nxTjGRereiPOGT1IfcG2O83p"
     }
   }
   sensitive = true
