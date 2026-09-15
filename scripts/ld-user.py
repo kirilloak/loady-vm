@@ -2,24 +2,31 @@
 """Create or update a Loady user in the local Cosmos emulator so a real DEV B2C token resolves.
 
 Use case: running Loady.Backend.Api with DEV authentication but local databases (the
-`be-backend-sso` and `stack-be-fe-sso` run configurations in dotfiles/rider/run/). Token
-validation succeeds against DEV
-B2C, then the backend resolves the Loady user by normalized email against local Cosmos, where every
-seeded user is @testcompany1.loc or @testcompany2.loc. Without a matching local user every
-authenticated request returns 401.
+`be-backend-sso` and `stack-be-fe-sso` run configurations in dotfiles/rider/run/). Token validation
+succeeds against DEV B2C, then the backend resolves the Loady user by normalized email against local
+Cosmos, where every seeded user is @testcompany1.loc or @testcompany2.loc. Without a matching local
+user every authenticated request returns 401.
 
 The email written here must match the token's `emails` claim after normalization (lowercased,
-trimmed). Idempotent: a second run updates the existing user rather than adding a duplicate.
+trimmed), and the document id must be the B2C object id, because that is what the backend writes
+into createdBy and updatedBy and compares against for "did I do this". B2C_IDS below pairs the two;
+an email that is not in it gets a GUID derived from the address, which matches no real identity and
+is only good enough for a user nobody signs in as.
+
+Idempotent: a second run updates the existing user rather than adding a duplicate. If the existing
+document has a different id - a derived one written before the real B2C id was known - it is deleted
+and rewritten, because a Cosmos document id cannot be changed in place.
 
 The backend caches UserData and UserDto by mail, so the local Redis database is flushed at the end.
 
 The Cosmos key below is the emulator's documented public one, not a credential.
 
 Usage:
-    ld-user [email] [--company TESTCOMPANY1] [--role companyAdmin] [--id <guid>]
+    ld-user [email] [--id <guid>] [--company TESTCOMPANY1] [--role companyAdmin] [--admin]
 
-The email defaults to the checkout's `git config user.email`. The user id defaults to a
-deterministic GUID derived from the email, so the same email always lands on the same document.
+The email defaults to the checkout's `git config user.email`, and the id to that email's entry in
+B2C_IDS. The names default to the email's local part, so kirill.starodubtsev@loady.com is Kirill
+Starodubtsev, which is what the DEV document holds.
 
 Run it on the VM: Cosmos and Redis are the containers ld-reset starts there. From the Mac,
 `ld-vm ld-user`.
@@ -42,6 +49,12 @@ import uuid
 EMULATOR_KEY = "C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw=="
 HOST = "https://localhost:8081"
 DATABASE = "Loady"
+
+# B2C object ids by email. Not secrets: the object id is in every token the tenant issues, and the
+# tenant is DEV. Add a line when another identity needs a local user.
+B2C_IDS = {
+    "kirill.starodubtsev@loady.com": "3863873e-76c0-48f7-ace7-a2f62f335a83",
+}
 REDIS_HOST = "127.0.0.1"
 REDIS_PORT = "6379"
 REDIS_CONTAINER = "redis"
@@ -97,6 +110,23 @@ def upsert(collection, document):
     })
 
 
+def delete_document(collection, document_id):
+    resource_link = f"dbs/{DATABASE}/colls/{collection}/docs/{document_id}"
+    date = datetime.datetime.now(datetime.timezone.utc).strftime("%a, %d %b %Y %H:%M:%S GMT")
+    request = urllib.request.Request(
+        f"{HOST}/{resource_link}",
+        headers={
+            "Authorization": authorization("DELETE", "docs", resource_link, date),
+            "x-ms-date": date,
+            "x-ms-version": "2018-12-31",
+            "x-ms-documentdb-partitionkey": json.dumps([document_id]),
+        },
+        method="DELETE",
+    )
+    with urllib.request.urlopen(request, context=CONTEXT, timeout=30):
+        return None
+
+
 def git_email():
     try:
         result = subprocess.run(
@@ -142,9 +172,12 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("email", nargs="?", help="defaults to git config user.email")
+    parser.add_argument("--id", dest="user_id", help="B2C object id (default: the email's B2C_IDS entry)")
     parser.add_argument("--company", default="TESTCOMPANY1", help="companyLoadyId (default: TESTCOMPANY1)")
     parser.add_argument("--role", default="companyAdmin", help="roleId (default: companyAdmin)")
-    parser.add_argument("--id", dest="user_id", help="user id (default: derived from the email)")
+    parser.add_argument("--first", help="first name (default: from the email)")
+    parser.add_argument("--last", help="last name (default: from the email)")
+    parser.add_argument("--admin", action="store_true", help="set isAdmin, the Loady-wide admin flag")
     arguments = parser.parse_args()
 
     email = (arguments.email or git_email()).strip().lower()
@@ -154,18 +187,28 @@ def main():
         parser.error(f"'{email}' is not an email address")
 
     company = arguments.company
-    user_id = arguments.user_id or str(uuid.uuid5(uuid.NAMESPACE_URL, f"loady-local:{email}"))
+    user_id = arguments.user_id or B2C_IDS.get(email)
+    if not user_id:
+        user_id = str(uuid.uuid5(uuid.NAMESPACE_URL, f"loady-local:{email}"))
+        print(f"ld-user: {email} has no B2C id; deriving {user_id}, which no token will match.",
+              file=sys.stderr)
+        print("         Pass --id, or add the address to B2C_IDS in this script.", file=sys.stderr)
 
-    first_name = email.split("@", 1)[0].split(".")[0].capitalize() or "Local"
-    last_name = "SsoTest"
+    parts = [part for part in email.split("@", 1)[0].replace("_", ".").split(".") if part]
+    first_name = arguments.first or (parts[0].capitalize() if parts else "Local")
+    last_name = arguments.last or (parts[1].capitalize() if len(parts) > 1 else "User")
     now = datetime.datetime.now(datetime.timezone.utc).isoformat().replace("+00:00", "Z")
 
     existing = query("Users", "SELECT c.id FROM c WHERE c.mail = @mail", [{"name": "@mail", "value": email}])
-    if existing:
-        user_id = existing[0]["id"]
+    if not existing:
+        print(f"==> creating user {user_id}")
+    elif existing[0]["id"] == user_id:
         print(f"==> updating existing user {user_id}")
     else:
-        print(f"==> creating user {user_id}")
+        # A Cosmos document id is immutable, so moving a user onto its real B2C id means replacing
+        # the document. The old one has to go or the backend finds two users for one address.
+        print(f"==> replacing {existing[0]['id']} with {user_id}")
+        delete_document("Users", existing[0]["id"])
 
     upsert("Users", {
         "id": user_id,
@@ -173,12 +216,15 @@ def main():
         "mail": email,
         "firstName": first_name,
         "lastName": last_name,
+        "isAdmin": arguments.admin,
         "roles": [{"companyId": company, "roleId": arguments.role}],
         "invitationAccepted": True,
-        "createdBy": "LocalSsoSetup",
-        "createdByUserName": "Local SSO Setup",
-        "updatedBy": "LocalSsoSetup",
-        "updatedByUserName": "Local SSO Setup",
+        "createdBy": user_id,
+        "createdByUserName": f"{first_name} {last_name}",
+        "updatedBy": user_id,
+        "updatedByUserName": f"{first_name} {last_name}",
+        "trueUpdatedBy": "SYSTEM",
+        "trueUpdatedByUserName": "SYSTEM",
         "createdTimeUtc": now,
         "updatedTimeUtc": now,
     })
@@ -193,18 +239,33 @@ def main():
         return 1
 
     document = {key: value for key, value in members_documents[0].items() if not key.startswith("_")}
-    members = [member for member in document.get("members", []) if member.get("mail", "").lower() != email]
-    members.append({
+
+    # Matched on the id as well as the mail: after an id change the old entry carries the same
+    # address, and after an address change it carries the same id. Either one left behind is a
+    # second membership for one person.
+    entry = {}
+    remaining = []
+    for member in document.get("members", []):
+        if member.get("mail", "").lower() == email or member.get("id") == user_id:
+            entry = entry or dict(member)
+        else:
+            remaining.append(member)
+
+    # Start from whatever was there: the seeded entries may carry fields this does not know about,
+    # and dropping one would be a silent change to a document the seeder owns.
+    entry.update({
         "id": user_id,
         "firstName": first_name,
         "lastName": last_name,
         "mail": email,
         "roleId": arguments.role,
     })
-    document["members"] = members
+    document["members"] = remaining + [entry]
     upsert("CompanyMembers", document)
+    print(f"==> {company} members: {len(document['members'])}")
 
-    print(f"==> {email} -> {company} as {arguments.role} (userId {user_id})")
+    admin = " and Loady admin" if arguments.admin else ""
+    print(f"==> {first_name} {last_name} <{email}> -> {company} as {arguments.role}{admin} (id {user_id})")
     flush_redis()
     return 0
 

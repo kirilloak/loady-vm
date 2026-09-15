@@ -157,20 +157,37 @@ a 401 until `ld-user` writes one.
 ```bash
 ld-user                                          # the checkout's git config user.email
 ld-user kirill.starodubtsev@Loady.com            # or an explicit address
-ld-user someone@loady.com --company TESTCOMPANY2 --role companyUser
+ld-user someone@loady.com --id 3863873e-... --company TESTCOMPANY2 --role companyUser
 ld-vm 'ld-user kirill.starodubtsev@Loady.com'    # the same thing, from the Mac
 ```
 
 The address is lowercased and trimmed before anything is written, because that is what the backend
 does to the token's `emails` claim before looking the user up. `Loady.com` and `loady.com` are the
 same user; so are two runs with the same address, which update the one document rather than adding
-a second. `--company` and `--role` default to `TESTCOMPANY1` and `companyAdmin`, and `--id` pins
-the user id, which otherwise derives from the email so that it is stable across runs.
+a second.
+
+The document id has to be the **B2C object id**, not any GUID: the backend writes it into `createdBy`
+and `updatedBy` and compares against it to decide what you authored. `B2C_IDS` at the top of
+`scripts/ld-user.py` pairs each address with its id, which is not a secret - it is in every token
+the DEV tenant issues - and `--id` overrides it. An address in neither gets a derived GUID and a
+warning, which is fine for a user nobody signs in as and useless for one who does. When the stored
+document turns out to have the wrong id, it is deleted and rewritten, because a Cosmos document id
+cannot be changed in place.
+
+`--company` and `--role` default to `TESTCOMPANY1` and `companyAdmin`, `--first` and `--last`
+default to the email's local part, and `--admin` sets `isAdmin`, the Loady-wide admin flag, which is
+off unless asked for.
+
+Two documents are written, because the backend reads both. The `Users` document is the identity;
+the `CompanyMembers` document for `--company` carries the membership, and without an entry there the
+user exists but belongs to no company. The entry is matched on the id as well as the address, so an
+id or address that has changed leaves one membership rather than two, and an entry that is already
+there is updated in place rather than rebuilt, which keeps any field the seeder put on it. A company
+with no `CompanyMembers` document at all is an error pointing at `ld-reset`.
 
 It runs on the VM, because Cosmos and Redis are the containers `ld-reset` starts there, and it
-fails with that advice if the emulator is not reachable. It writes the user and the matching
-`CompanyMembers` entry, then flushes the local Redis, without which the backend keeps serving the
-user it cached by mail before the row existed. `ld-reset` wipes the data, so it runs this itself as
+fails with that advice if the emulator is not reachable. Afterwards it flushes the local Redis,
+without which the backend keeps serving the user it cached by mail before the row existed. `ld-reset` wipes the data, so it runs this itself as
 its last step, and a failure there is a warning rather than a failed reset. The calls above are for
 a second address, a different company or role, or a user needed without a reset.
 
