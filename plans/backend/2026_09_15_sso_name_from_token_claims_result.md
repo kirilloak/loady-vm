@@ -45,10 +45,19 @@ any repo) is not applied anywhere - full instructions are inlined below in "Load
 - `~/loady-vm/integrations/sso-idp-tomorrowops/variables.tf` - `test_users` object type gained two optional fields,
   `given_name` and `surname` (`optional(string)`, so existing untracked tfvars entries that don't set them still apply
   cleanly).
-- `~/loady-vm/integrations/sso-idp-tomorrowops/main.tf` - `azuread_user.test` now passes `given_name`/`surname`
-  through from `var.test_users[each.key]`. `outputs.tf` needed no change - its `claims_mapping` output already
-  advertised `given_name`/`surname` before this task. Edited in place, left uncommitted (private repo, separate
-  apply/commit flow - the founder reapplies manually).
+- `~/loady-vm/integrations/sso-idp-tomorrowops/main.tf` - two changes:
+  - `azuread_user.test` now passes `given_name`/`surname` through from `var.test_users[each.key]`.
+  - `azuread_application.oidc` gained an `optional_claims { id_token { name = "given_name" } id_token { name =
+    "family_name" } }` block. Root cause found 2026-09-15: Entra's v2.0 ID token does not include
+    `given_name`/`family_name` just because `profile` scope is requested - they're gated behind an explicit
+    "optional claims" declaration on the app registration, independent of the user object having the fields set
+    and independent of B2C's own config. Without this block, the token has `name` (a basic claim, included
+    automatically with `profile` scope) but not `given_name`/`family_name`, even when the Entra user object has
+    First/Last name filled in and B2C's identity provider claims mapping and user flow application claims are both
+    configured correctly - confirmed against a real decoded token during this session.
+  - `outputs.tf` needed no change - its `claims_mapping` output already advertised `given_name`/`surname` before
+    this task.
+  - Edited in place, left uncommitted (private repo, separate apply/commit flow - the founder reapplies manually).
 
 ## Manual actions for the founder
 
@@ -60,12 +69,23 @@ any repo) is not applied anywhere - full instructions are inlined below in "Load
   nothing yet for Terraform to diff.
 - Still needed: add real `given_name`/`surname` values per test user to the untracked tfvars file, then
   `terraform apply` again - that run should show existing `azuread_user.test` entries changed in place (not added).
-- Confirmed on 2026-09-15: B2C config alone (user flow application claims + `Kirill-SSO` identity provider claims
-  mapping) does not produce `given_name`/`family_name` in the issued token while this tfvars step is outstanding -
-  decoded token had `name: "Kirill SSO"` (from `display_name`, already set) but no `given_name`/`family_name` at
-  all, because the underlying Entra test user has nothing set for those fields yet. B2C can only forward a claim
-  the identity provider actually sends; it can't be tested end to end until the tfvars step above is done and a
-  fresh token is issued (old tokens predate the user having these fields).
+- ~~Hypothesis, 2026-09-15 (superseded, see below): B2C config alone does not produce `given_name`/`family_name`
+  in the issued token because the underlying Entra test user has nothing set for those fields yet.~~ **Ruled out**:
+  the founder confirmed First name "Kirill" / Last name "SSO" are already set directly on the
+  `kirill@tomorrowops.com` user object in the tomorrowops tenant (`385bd049-aaa0-4d85-9bd8-d777e354c0a7`, the
+  tenant the token's `idp` claim points to) - not through Terraform/tfvars, but the source data is correct
+  regardless of how it got there.
+- **Actual root cause found, 2026-09-15**: Entra's v2.0 ID token does not include `given_name`/`family_name` just
+  because `profile` scope was requested - they're gated behind an explicit "optional claims" declaration on the
+  app registration itself, independent of the user object having the fields set and independent of B2C's identity
+  provider claims mapping / user flow application claims (both of which the founder had already configured
+  correctly). Fixed by adding an `optional_claims` block to `azuread_application.oidc` in `main.tf` (see "Files
+  changed"). Not yet applied/re-tested as of this note.
+- Remaining drift risk once `given_name`/`surname` *are* added to a user's tfvars entry: if a user object was
+  edited manually outside Terraform (as `kirill@tomorrowops.com`'s First/Last name were) and its tfvars entry
+  doesn't set matching `given_name`/`surname`, a future `terraform apply` would push `null` and erase the manual
+  edit - Terraform now unconditionally manages these fields once a user is in the tfvars `test_users` map. Check
+  `terraform plan` output before applying if unsure.
 - Configure Loady B2C per "Loady B2C configuration" below, for every environment/customer this ships to.
 - Whether other SSO customers besides BASF/tomorrowops are live and would need the same two B2C settings is still open
   per the plan's own "Assumptions" section - not verifiable from this repo; check with Nelia/Heinz which environments

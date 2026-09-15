@@ -11,6 +11,18 @@ resource "azuread_application" "oidc" {
       id_token_issuance_enabled     = false
     }
   }
+
+  # given_name/family_name are not included in a v2.0 ID token just because the "profile" scope was requested -
+  # Entra only emits them if the app registration explicitly asks for them as optional claims.
+  optional_claims {
+    id_token {
+      name = "given_name"
+    }
+
+    id_token {
+      name = "family_name"
+    }
+  }
 }
 
 resource "azuread_service_principal" "oidc" {

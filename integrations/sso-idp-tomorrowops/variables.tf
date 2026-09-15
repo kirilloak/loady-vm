@@ -55,7 +55,7 @@ variable "domain_hint" {
 }
 
 variable "test_users" {
-  description = "Optional test users keyed by user principal name. Passwords land in Terraform state, so they are supplied from an untracked tfvars file and never defaulted here."
+  description = "Test users keyed by user principal name. Passwords land in Terraform state and in this default, so treat this file as holding a real (if low-value, test-only) credential once you replace the placeholder password below."
   type = map(object({
     display_name          = string
     given_name            = optional(string)
@@ -63,6 +63,13 @@ variable "test_users" {
     password              = string
     force_password_change = optional(bool, false)
   }))
-  default   = {}
+  default = {
+    "sso@tomorrowops.com" = {
+      display_name = "SSO Test User"
+      given_name   = "SSO"
+      surname      = "Test"
+      password     = "REPLACE_ME_BEFORE_APPLYING"
+    }
+  }
   sensitive = true
 }
