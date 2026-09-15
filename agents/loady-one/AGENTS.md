@@ -36,6 +36,8 @@ what the code already does.
 2. Use the shared `ErrorMessage` component instead of custom error elements and CSS.
 3. Add and preserve stable `data-qa-id` attributes on inputs, buttons and other elements used by
    integration tests, for example `data-qa-id="login-email-input"`.
+4. Read query parameters from Vue Router's reactive `route.query`, not `window.location`, and reuse
+   existing constants for known query keys and values.
 
 ## Working in more than one of them
 
