@@ -50,12 +50,14 @@ outside any repo) is not applied anywhere - full instructions are inlined below 
 
 ## Manual actions for the founder
 
-- Review and commit the `~/loady-vm/integrations/sso-idp-tomorrowops` Terraform edits (`variables.tf`, `main.tf`),
-  then add `given_name`/`surname` values for the test users in the untracked tfvars file, then `terraform apply`.
-  Not verified from this session: whether `given_name`/`surname` are valid arguments on the `azuread_user` resource
-  at the pinned provider version (`hashicorp/azuread ~> 3.9`, locked to `3.9.0` in `.terraform.lock.hcl`) - these
-  are standard Microsoft Graph user properties and the provider almost certainly supports them, but no `terraform
-  plan`/`validate` ran here (no `terraform` binary and no Azure credentials in this session).
+- `terraform apply` of the `~/loady-vm/integrations/sso-idp-tomorrowops` edits ran on 2026-09-15: `Apply complete!
+  Resources: 0 added, 0 changed, 0 destroyed.` This confirms `given_name`/`surname` are valid arguments on
+  `azuread_user` at the pinned provider version (`hashicorp/azuread ~> 3.9`, locked to `3.9.0`) - the schema change
+  applied cleanly, resolving the one open unknown from the plan. `0 changed` is expected at this point: the fields
+  exist on the resource now but every existing test user still has them unset (`null`), same as before the change,
+  so there's nothing yet for Terraform to diff.
+- Still needed: add real `given_name`/`surname` values per test user to the untracked tfvars file, then
+  `terraform apply` again - that run should show existing `azuread_user.test` entries changed in place (not added).
 - Configure Loady B2C per "Loady B2C configuration" below, for every environment/customer this ships to.
 - Whether other SSO customers besides BASF/tomorrowops are live and would need the same two B2C settings is still
   open per the plan's own "Assumptions" section - not verifiable from this repo; check with Nelia/Heinz which
@@ -69,34 +71,45 @@ the claims and does nothing.
 
 ### 1. User flow application claims (once per environment - shared by every identity provider using that flow)
 
-Azure AD B2C portal → User flows → `B2C_1_sso_sign_up_sign_in` → **Application claims**
+1. Azure Portal → your B2C tenant → **User flows** (left nav, under "Policies")
+2. Click **B2C_1_sso_sign_up_sign_in**
+3. Left nav of that flow → **Application claims**
+4. Tick **Given Name** and **Surname** (leave **Email Addresses** and **Identity Provider** checked too)
+5. **Save**
 
-- Check **Given Name** and **Surname**, in addition to the existing **Email Addresses** and **Identity Provider**.
-- This is a pass-through gate, not a mapping: it just allows `given_name`/`family_name` to appear in the issued
-  token when the active identity provider supplied them. It does not know or care what the identity provider's own
-  claim was originally called.
-- Leaving this unchecked means the claims never reach the token even if the identity provider mapping below is set
-  correctly - both steps are required.
+This is a pass-through gate, not a mapping - it just allows `given_name`/`family_name` to appear in the issued token
+when the active identity provider supplied them. It doesn't know or care what the identity provider's own claim was
+called - that translation happens in step 2. Skipping this step means the claims never reach the token even if step
+2 is done correctly for every provider - both are required, and this one only needs doing once per environment (not
+once per customer).
 
 ### 2. Identity provider claims mapping (once per customer, i.e. once per identity provider entry)
 
-Azure AD B2C portal → Identity Providers → the specific customer's OIDC provider entry (e.g. `basf-idp`,
-`tomorrowops-idp`) → edit → **Claims mapping**
+Portal path for any provider: **Identity providers** (left nav) → click the provider → **Identity provider claims
+mapping** section. This is the full set of rows on that screen - the first three (User ID, Display name, Email)
+are the pre-existing setup and stay as they are; **Given name** and **Surname** are the two this task adds/fixes.
+Same values for every provider on this feature, since B2C's target claim names are fixed and both `tomorrowops` and
+BASF happen to emit the source claims under their standard OIDC names already:
 
-- Add two entries alongside the existing ones: **Given Name → `given_name`**, **Surname → `family_name`**.
-- The left side (Given Name, Surname) is B2C's fixed target claim name - always the same regardless of customer.
-  The right side is whatever the *source* field is called in that specific identity provider's own token; B2C
-  reads it from there and republishes it under the fixed name. This is the layer that absorbs differences between
-  customers' IdPs (one company's IdP might call it `given_name`, another might use `firstName` or something
-  nonstandard) - no code change is ever needed for a naming difference, only this mapping.
-- For BASF specifically: their tenant's default token already includes `family_name`/`given_name` under those
-  exact names (confirmed by Dennis), so the mapping is `given_name → given_name`, `family_name → family_name` -
-  only this B2C-side step is needed, no change on BASF's own app registration.
-- For the `tomorrowops` test identity provider (Terraform-managed, see "Files changed" above): the Terraform
-  root's `claims_mapping` output already documents this exact mapping
-  (`given_name → given_name`, `surname → family_name`) - copy those two rows into the portal's claims mapping UI
-  for that provider. The Terraform-managed test users won't have anything to map from until their `given_name`/
-  `surname` fields are populated via the tfvars file and applied (see "Manual actions" above).
+| B2C portal field | Value to enter |
+|---|---|
+| User ID | `sub` |
+| Display name | `name` |
+| Given name | `given_name` |
+| Surname | `family_name` |
+| Email | `preferred_username` |
+
+Applies to both providers:
+
+- **Tomorrowops** (the `Kirill-SSO` entry, domain hint `tomorrowops`): **Given name** is already correct
+  (`given_name`). **Surname** currently reads `Surnamefamily_name` - clear the field completely and retype just
+  `family_name`. Then **Save**.
+- **BASF** (`basf-idp` or however it's named): set **Given name** → `given_name`, **Surname** → `family_name`,
+  same as above; leave User ID/Display name/Email as already configured. Then **Save**. BASF's tenant already sends
+  these under exactly these names (confirmed by Dennis), so nothing else needs to change on BASF's side.
+0
+Do step 1 and step 2 in the same environment before testing a given provider - if only one is done, the claim still
+won't reach the token.
 
 ### 3. Verify end to end
 
