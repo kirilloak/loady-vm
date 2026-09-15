@@ -74,6 +74,7 @@ reservation that prevents it.
 | `ld-tfd [--force]`                                       | create or rebuild the VM end to end, including bootstrap and warm-up |
 | `ld-reset [--hard]`                                      | recreate the containers and run both seeders                         |
 | `ld-cosmos-cert [--print]`                               | trust the Cosmos emulator's certificate (`ld-reset` does it already) |
+| `ld-user [email]`                                        | local Cosmos user a DEV B2C token resolves to (the `*-sso` configs)  |
 | `ld-add`, `ld-update`, `ld-remove`                       | EF migrations                                                        |
 | `ld-pr <id-or-url>`                                       | read a PR's details and comment threads (read-only)                  |
 | `ld-stn`, `ld-st`, `ld-stl`, `ld-str`                    | worktrees                                                            |

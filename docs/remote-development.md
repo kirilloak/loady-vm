@@ -87,7 +87,16 @@ ld-reset            # wipe, start and seed the five backing services; --hard cle
 # Rider: stack-all
 # Rider: stack-public-apis when the public surface is needed
 ld-cosmos-cert      # refresh Cosmos trust manually; ld-reset already does it
+ld-user             # local Cosmos user for the be-backend-sso run configuration
 ```
+
+`ld-user` exists for one case: `be-backend-sso`, and the `stack-be-fe-sso` compound around it,
+authenticate against DEV B2C but read local databases. The token is real, so the backend looks its user up by normalized email
+in the local Cosmos emulator, where every seeded user is `@testcompany1.loc` or `@testcompany2.loc`
+and yours is not there. Every authenticated request is a 401 until `ld-user` writes it. With no
+argument it uses the checkout's `git config user.email`; `--company` and `--role` override the
+`TESTCOMPANY1` / `companyAdmin` default. It is idempotent, and `ld-reset` wipes the data, so it is
+run again after one.
 
 Docker runs SQL Server, Cosmos DB, Redis, Azurite and the APIM proxy, and `ld-reset` verifies the
 Azure CLI session and runs both seeders after the services are ready. Rider runs the eleven function
