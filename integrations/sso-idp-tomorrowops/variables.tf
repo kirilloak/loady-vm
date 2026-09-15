@@ -1,19 +1,27 @@
+# The values below are this root's configuration, not just its interface: there is one tenant, one
+# B2C instance and one application, so the defaults are the real thing and the root is reproducible
+# from a clean checkout with no untracked file. None of them is a secret — a tenant id, a display
+# name, a public callback URL, a date and a domain hint. The secrets this root produces live in
+# state, which is remote; see providers.tf.
+
 variable "tenant_id" {
   description = "Microsoft Entra tenant ID in which to create the test identity provider application."
   type        = string
+  default     = "385bd049-aaa0-4d85-9bd8-d777e354c0a7"
   nullable    = false
 }
 
 variable "application_display_name" {
   description = "Display name of the confidential OIDC application used by Loady B2C."
   type        = string
-  default     = "Loady SSO test identity provider"
+  default     = "Loady Private SSO Identity Provider"
   nullable    = false
 }
 
 variable "b2c_callback_url" {
   description = "Loady B2C generic OIDC callback URL ending in /oauth2/authresp."
   type        = string
+  default     = "https://loadyb2cdev.b2clogin.com/loadyb2cdev.onmicrosoft.com/oauth2/authresp"
   nullable    = false
 
   validation {
@@ -25,6 +33,7 @@ variable "b2c_callback_url" {
 variable "client_secret_end_date" {
   description = "Stable RFC3339 expiry of the OIDC client secret."
   type        = string
+  default     = "2027-08-14T00:00:00Z"
   nullable    = false
 
   validation {
@@ -36,6 +45,7 @@ variable "client_secret_end_date" {
 variable "domain_hint" {
   description = "Domain hint configured on the corresponding Loady B2C identity provider."
   type        = string
+  default     = "tomorrowops"
   nullable    = false
 
   validation {
@@ -45,7 +55,7 @@ variable "domain_hint" {
 }
 
 variable "test_users" {
-  description = "Optional test users keyed by user principal name. Passwords remain in local Terraform state."
+  description = "Optional test users keyed by user principal name. Passwords land in Terraform state, so they are supplied from an untracked tfvars file and never defaulted here."
   type = map(object({
     display_name          = string
     password              = string

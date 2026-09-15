@@ -148,10 +148,34 @@ converging that machine too. The Loady key is this setup's alone.
 
 ## The Terraform state
 
-`infra/terraform.tfstate` is local and gitignored. It holds the Proxmox password in clear, so it is never committed
-and never copied anywhere.
+Both Terraform roots, `infra` and `integrations/sso-idp-tomorrowops`, keep their state in Azure Blob Storage rather
+than on this disk: the `loady-vm` subscription (`d17722fc-3eb6-42ac-a074-5a43602cf703`) in the `tomorrowops.com`
+tenant, resource group `rg-loady-tfstate`, storage account `stloadytfstate`, one container per root named after it.
+The backend blocks live in `infra/versions.tf` and `integrations/sso-idp-tomorrowops/providers.tf`.
 
-Losing it does not lose the VM. Either import the machine:
+Both files hold secrets in clear — the Proxmox password in one, the OIDC client secret in the other — so the account
+has **shared key access disabled**. There is no account key or SAS to leak or to store anywhere; the only way in is an
+Entra identity holding **Storage Blob Data Owner** on the account, and `use_azuread_auth = true` makes Terraform use
+the `az login` session. So a Terraform command now starts with:
+
+```bash
+az login
+az account set -s d17722fc-3eb6-42ac-a074-5a43602cf703
+```
+
+A 403 on `terraform init` or `plan` means that sign-in, or the role assignment, and not the state. To restore the role:
+
+```bash
+az role assignment create --assignee-object-id "$(az ad signed-in-user show --query id -o tsv)" \
+  --assignee-principal-type User --role "Storage Blob Data Owner" \
+  --scope "$(az storage account show -n stloadytfstate -g rg-loady-tfstate --query id -o tsv)"
+```
+
+Blob versioning and 30 day soft delete are on for blobs and containers alike, so a bad apply, a wrong
+`terraform state rm` or a deleted container is recoverable inside that window with `az storage blob revert` or
+`az storage blob undelete`. That is a mistake shield, not a backup: losing the subscription loses the state.
+
+Losing it still does not lose the VM. Either import the machine:
 
 ```bash
 cd infra && ld-tfin

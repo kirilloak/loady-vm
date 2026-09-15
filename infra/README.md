@@ -17,8 +17,9 @@ build. The VM trades guest-side hardening for build throughput — `mitigations=
 `/tmp` on tmpfs, no guest I/O scheduler, raised open-file limits — which is deliberate: only the
 founder's own code runs in this guest.
 
-State is local (`terraform.tfstate` here, gitignored). It holds the Proxmox password in clear, so it
-is never committed; `docs/manual-secrets.md` covers losing it.
+State is remote, in Azure Blob Storage in the founder's own `loady-vm` subscription; `versions.tf`
+carries the backend and `docs/manual-secrets.md` owns access and recovery. It holds the Proxmox
+password in clear, so nothing here writes a state file to this disk.
 
 ## The image
 
