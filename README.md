@@ -75,6 +75,7 @@ reservation that prevents it.
 | `ld-reset [--hard]`                                      | recreate the containers and run both seeders                         |
 | `ld-cosmos-cert [--print]`                               | trust the Cosmos emulator's certificate (`ld-reset` does it already) |
 | `ld-add`, `ld-update`, `ld-remove`                       | EF migrations                                                        |
+| `ld-pr <id-or-url>`                                       | read a PR's details and comment threads (read-only)                  |
 | `ld-stn`, `ld-st`, `ld-stl`, `ld-str`                    | worktrees                                                            |
 | `ld-agents [--all]`                                      | sync the agent files into a checkout, or into every one of them      |
 

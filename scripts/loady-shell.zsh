@@ -59,6 +59,13 @@ ld-reset()   { ld_run scripts/ld-reset.sh "$@"; }
 ld-cosmos-cert() { ld_run scripts/cosmos-cert.sh "$@"; }
 
 # ---------------------------------------------------------------------------------------------
+# Pull requests, read-only
+# ---------------------------------------------------------------------------------------------
+# PR details and comment threads over curl and the read-only Azure DevOps PAT. See AGENTS.md
+# rule 3 for why this is the one exception to "no az repos automation": it only reads.
+ld-pr() { ld_run scripts/ld-pr.sh "$@"; }
+
+# ---------------------------------------------------------------------------------------------
 # Migrations
 # ---------------------------------------------------------------------------------------------
 ld-add()    { ld_run scripts/ld-migrate.sh add "$@"; }

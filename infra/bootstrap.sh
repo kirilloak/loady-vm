@@ -372,6 +372,11 @@ if [ -r \"\$HOME/.config/loady/github-token\" ]; then
   export GH_TOKEN
   export GITHUB_TOKEN=\"\$GH_TOKEN\"
 fi
+# The read-only Azure DevOps PAT (Code: Read only), for ld-pr. Same reasoning as GH_TOKEN above.
+if [ -r \"\$HOME/.config/loady/ado-pat\" ]; then
+  AZURE_DEVOPS_PAT=\"\$(cat \"\$HOME/.config/loady/ado-pat\")\"
+  export AZURE_DEVOPS_PAT
+fi
 export PATH=\$HOME/.local/bin:\$HOME/.dotnet/tools:\$DOTNET_ROOT:\$PATH"
 if [[ "$(cat "$profile" 2>/dev/null || true)" != "$profile_content" ]]; then
   echo "$profile_content" | sudo tee "$profile" >/dev/null
@@ -470,6 +475,25 @@ elif [[ -s "$github_token_file" ]]; then
 else
   git_todo="$git_todo
   - no GitHub PAT in the register, so GH_TOKEN is unset and the host keys come unauthenticated"
+fi
+
+# A read-only Azure DevOps PAT (Code: Read only), for ld-pr to read PR details and comment
+# threads over curl. Optional, same degrade-to-warning shape as the GitHub PAT above.
+ado_token="${LD_SECRET_ADO_TOKEN:-}"
+ado_token="${ado_token// /}"
+ado_token_file="$HOME/.config/loady/ado-pat"
+if [[ -n "$ado_token" ]]; then
+  install -d -m 700 "$(dirname "$ado_token_file")"
+  if [[ "$(cat "$ado_token_file" 2>/dev/null || true)" != "$ado_token" ]]; then
+    (umask 077 && printf '%s\n' "$ado_token" >"$ado_token_file")
+    echo "    wrote ${ado_token_file/#$HOME/~}"
+  fi
+  chmod 600 "$ado_token_file"
+elif [[ -s "$ado_token_file" ]]; then
+  : # A converge run without the register: the token an earlier run placed is still good.
+else
+  git_todo="$git_todo
+  - no Azure DevOps PAT in the register, so ld-pr has no credential to read with"
 fi
 
 mkdir -p "$HOME/.ssh"

@@ -156,6 +156,7 @@ resource "terraform_data" "bootstrap" {
       export LD_SECRET_SSH_GIT_BASE64="$(printf %s '${base64encode(var.loady_ssh_git_base64)}' | base64 -d)"
       export LD_SECRET_SSH_GITHUB_BASE64="$(printf %s '${base64encode(var.github_ssh_base64)}' | base64 -d)"
       export LD_SECRET_GITHUB_TOKEN="$(printf %s '${base64encode(coalesce(var.github_token, " "))}' | base64 -d)"
+      export LD_SECRET_ADO_TOKEN="$(printf %s '${base64encode(coalesce(var.azure_devops_token, " "))}' | base64 -d)"
     EOT
     destination = "/home/dev/.cache/loady-bootstrap/environment"
   }

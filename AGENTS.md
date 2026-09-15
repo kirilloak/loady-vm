@@ -61,6 +61,12 @@ Every decision in this repository follows from these. They are not preferences.
    The GitHub PAT the register carries is for reading the API — pinning GitHub's host keys, and
    `GH_TOKEN` for agents. Under rule 2 it never writes.
 
+   The one exception to "no Azure DevOps web UI or `az repos` automation": `ld-pr` reads a PR's
+   details and comment threads over `curl` and the register's read-only Azure DevOps PAT (`Code:
+   Read` only, nothing else), so an agent can see what another developer wrote on a PR without a
+   human pasting it in. It is read-only end to end — the PAT cannot write, and nothing here calls
+   `az repos` or opens a browser. Pull requests are still the founder's, by hand.
+
 4. **The Mac is a client, plus a cold fallback.** Daily work happens on the VM. The Mac runs the
    Rider client, a browser, `ssh`, and the Terraform root in `infra`. Its `~/loady-one`
    checkout exists only for when the Proxmox host is down; nothing synchronises the two, and a

@@ -11,7 +11,7 @@ tracked because item ids are identifiers, not secrets.
 | Item                    | Fields used                  | Used for                                                                      |
 |-------------------------|------------------------------|-------------------------------------------------------------------------------|
 | `dev-infra/dev-proxmox` | login password               | `root@pam` on the Proxmox API — creating the VM, and `vm-loady`/`vm-dev`      |
-| `workstation/loady`     | `ssh_loady_git_base64`       | the key the bootstrap writes onto the VM for `~/loady-one` (Azure DevOps)     |
+| `workstation/loady`     | `ssh_loady_git_base64`, `ado_pat_readonly` | the git key, and a read-only PAT for `ld-pr` (both Azure DevOps)|
 | `workstation/keys`      | `ssh_dev_vm_github_base64`   | the key it writes for `~/loady-vm` (GitHub) — `dev-vm-github`                 |
 | `prod-infra/prod-github`| `pat`                        | `GH_TOKEN` on the VM, and pinning GitHub's SSH host keys from the API         |
 
@@ -22,8 +22,8 @@ into a Loady-specific item would create a second copy of one credential, and two
 first time one is rotated. The cost is the other direction: rotating one of these is every machine that uses it, the
 kirilloak dev VM included.
 
-`workstation/loady` (`06e7a977-9e1f-4641-8e36-b4c50096047a`) is Loady's own and holds exactly one field. All four items
-already exist and `infra/.tf-vars` already points at them.
+`workstation/loady` (`06e7a977-9e1f-4641-8e36-b4c50096047a`) is Loady's own and holds two fields, the git key and the
+read-only PAT below. All four items already exist and `infra/.tf-vars` already points at them.
 
 ## Filling `workstation/loady`
 
@@ -137,6 +137,25 @@ The PAT is the weaker of the two and is treated that way. It lands at `~/.config
 login profile exports it as `GH_TOKEN` and `GITHUB_TOKEN`. Everything it is used for here is a read — pinning host keys
 from `api.github.com/meta`, and whatever an agent queries — and under `AGENTS.md` rule 2 nothing writes with it. If it
 is absent the bootstrap still converges and says so in its closing todo list.
+
+## The Azure DevOps PAT
+
+The second field on `workstation/loady`, `ado_pat_readonly`, is a PAT scoped to **Code: Read** only on the
+`Loady-Logistics` org — nothing else, so it cannot open, comment on, or merge anything even if misused. `ld-pr` is the
+only thing that reads it.
+
+Create it at the org's **Personal access tokens** page (user icon, top right, in Azure DevOps), named `ado_pat_readonly`
+- same name as the Bitwarden field, so there is one identifier for this PAT everywhere instead of two - scope **Custom
+defined** with **Code** set to **Read**, expiration whatever is convenient. It is shown once; paste it straight into a
+new **hidden** custom field named `ado_pat_readonly` on `workstation/loady` and save.
+
+Azure DevOps enforces expiry on PATs the same way it does on the SSH key above, so `ado_pat_readonly` will eventually
+need regenerating. There is no email warning for a PAT the way there is for the SSH key; the first sign is `ld-pr`
+failing with an auth error, at which point regenerate under the same name and update the field.
+
+It lands at `~/.config/loady/ado-pat`, 0600, and the login profile exports it as `AZURE_DEVOPS_PAT`. Absent, `ld-pr`
+reports the missing credential rather than failing to converge; the bootstrap notes it in the closing todo list the
+same way it does the GitHub PAT.
 
 ## Rotating a key
 

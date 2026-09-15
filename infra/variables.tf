@@ -128,3 +128,10 @@ variable "github_token" {
   sensitive   = true
   default     = null
 }
+
+variable "azure_devops_token" {
+  description = "A read-only PAT (Code: Read, nothing else) on the Loady-Logistics org, Loady's own. Used only by ld-pr to read a PR's details and comment threads over curl. Optional, because everything it does degrades to ld-pr reporting no credential"
+  type        = string
+  sensitive   = true
+  default     = null
+}
