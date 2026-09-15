@@ -35,12 +35,12 @@ through `ld-pr`, so these are file-level, not scroll-to-that-exact-comment links
 | B | general, 2026-08-28                                                 | Not done | Heinz         | [link](https://dev.azure.com/Loady-Logistics/loady/_git/loady-one/pullrequest/9819?_a=overview)                                                                                                            |
 | C | `frontend/src/app/auth/utils/auth.utils.ts`                         | Done     | Anton         | [link](https://dev.azure.com/Loady-Logistics/loady/_git/loady-one/pullrequest/9819?path=%2Ffrontend%2Fsrc%2Fapp%2Fauth%2Futils%2Fauth.utils.ts&_a=files)                                                   |
 | D | `login.component.vue` — ErrorMessage reuse                          | Done     | Anton         | [link](https://dev.azure.com/Loady-Logistics/loady/_git/loady-one/pullrequest/9819?path=%2Ffrontend%2Fsrc%2Fapp%2Fauth%2Fcomponents%2Flogin.component.vue&_a=files)                                        |
-| E | `login.component.vue` — spacing/gap                                 | Not done | Anton         | [link](https://dev.azure.com/Loady-Logistics/loady/_git/loady-one/pullrequest/9819?path=%2Ffrontend%2Fsrc%2Fapp%2Fauth%2Fcomponents%2Flogin.component.vue&_a=files)                                        |
+| E | `login.component.vue` — spacing/gap                                 | Done     | Anton         | [link](https://dev.azure.com/Loady-Logistics/loady/_git/loady-one/pullrequest/9819?path=%2Ffrontend%2Fsrc%2Fapp%2Fauth%2Fcomponents%2Flogin.component.vue&_a=files)                                        |
 | F | `login.component.vue` — dedupe welcome/login title                  | Done     | Anton         | [link](https://dev.azure.com/Loady-Logistics/loady/_git/loady-one/pullrequest/9819?path=%2Ffrontend%2Fsrc%2Fapp%2Fauth%2Fcomponents%2Flogin.component.vue&_a=files)                                        |
-| G | `login.component.vue` — Options API → `<script setup>`              | Not done | Anton         | [link](https://dev.azure.com/Loady-Logistics/loady/_git/loady-one/pullrequest/9819?path=%2Ffrontend%2Fsrc%2Fapp%2Fauth%2Fcomponents%2Flogin.component.vue&_a=files)                                        |
+| G | `login.component.vue` — Options API → `<script setup>`              | Done     | Anton         | [link](https://dev.azure.com/Loady-Logistics/loady/_git/loady-one/pullrequest/9819?path=%2Ffrontend%2Fsrc%2Fapp%2Fauth%2Fcomponents%2Flogin.component.vue&_a=files)                                        |
 | H | `login.component.vue` — `data-qa-id`                                | Done     | Anton         | [link](https://dev.azure.com/Loady-Logistics/loady/_git/loady-one/pullrequest/9819?path=%2Ffrontend%2Fsrc%2Fapp%2Fauth%2Fcomponents%2Flogin.component.vue&_a=files)                                        |
 | I | `login.component.vue` — `isWelcome` via `route.query`               | Done     | Anton         | [link](https://dev.azure.com/Loady-Logistics/loady/_git/loady-one/pullrequest/9819?path=%2Ffrontend%2Fsrc%2Fapp%2Fauth%2Fcomponents%2Flogin.component.vue&_a=files)                                        |
-| J | `login.component.vue` — description text color                      | Not done | Anton         | [link](https://dev.azure.com/Loady-Logistics/loady/_git/loady-one/pullrequest/9819?path=%2Ffrontend%2Fsrc%2Fapp%2Fauth%2Fcomponents%2Flogin.component.vue&_a=files)                                        |
+| J | `login.component.vue` — description text color                      | Done     | Anton         | [link](https://dev.azure.com/Loady-Logistics/loady/_git/loady-one/pullrequest/9819?path=%2Ffrontend%2Fsrc%2Fapp%2Fauth%2Fcomponents%2Flogin.component.vue&_a=files)                                        |
 | K | `SsoResolve.cs` — GET with query param, not body-deserialized query | Done     | Nelia         | [link](https://dev.azure.com/Loady-Logistics/loady/_git/loady-one/pullrequest/9819?path=%2Fbackend%2Fsrc%2FDomains%2FLoady.Backend.Api%2FAuthentication%2FSsoResolve.cs&_a=files)                          |
 | L | `SqlCompany.cs` — SSO columns vs. separate table                    | Not done | Nelia + Heinz | [link](https://dev.azure.com/Loady-Logistics/loady/_git/loady-one/pullrequest/9819?path=%2Fbackend%2Fsrc%2FShared%2FLoady.Relational.Domain%2FAggregateModels%2FCompanyAggregate%2FSqlCompany.cs&_a=files) |
 | M | general, 2026-09-11 — existing B2C local accounts + inactivity job  | Not done | Heinz         | [link](https://dev.azure.com/Loady-Logistics/loady/_git/loady-one/pullrequest/9819?_a=overview)                                                                                                            |
@@ -57,17 +57,21 @@ to tell them apart — Anton posted them as separate comments a few minutes apar
   `accountId`, instead of calling `.find()` against `undefined`.
 - **D:** Fixed — the validation and error spans are now the shared `ErrorMessage` component; the now-unused
   `.validation-error`/`.login-error` CSS was removed.
-- **E:** Not done yet — removing the uniform `gap: 1rem` needs a side-by-side check against the two attached screenshots
-  before I commit to exact per-element margins. Will follow up with a visual pass.
+- **E:** Fixed — removed the uniform `gap: 1rem` from `.login-form`; label-to-input spacing now comes from
+  `InputLabel`'s own `margin-bottom: var(--spacing-2)`, and `.button { margin-top: var(--spacing-6) }` widens the gap
+  before the submit button. Not checked against the attached screenshots or the live B2C form in a browser (no
+  browser/screenshot tool available in this session) — worth a quick visual pass next time you're testing SSO
+  end-to-end.
 - **F:** Fixed — `Logo`/`<h1>` now render once outside the `isWelcome` branch, both states share `login.title`, and the
   now-duplicate `login.welcome-title` key was removed from `en.yml`.
-- **G:** Not done yet — deliberately holding off so the Options API → `<script setup>` rewrite lands as its own
-  purely-mechanical diff, separate from the logic changes in this pass.
+- **G:** Fixed — rewritten as `<script setup lang="ts">`: `data()`/`computed`/`methods`/`setup()` collapsed into
+  `ref`/`computed`/plain functions, `defineComponent`/`name`/`components` dropped (no longer needed). No template or
+  logic changes; same behavior as the Options API version.
 - **H:** Fixed — added `data-qa-id` on the email input and both buttons, matching the convention used elsewhere (e.g.
   `edit-company-account.component.vue`).
 - **I:** Fixed — `isWelcome` now reads `route.query.reason` reactively instead of `window.location.search`.
-- **J:** Not done — holding off changing the description color until you/Vladi confirm the target value; happy to apply
-  `--color-blue-gray-100` once confirmed.
+- **J:** Fixed — description `<p>` now uses `var(--color-blue-gray-100)` per your confirmation, applied as the
+  provisional value pending final design sign-off if Vladi has other feedback.
 - **K:** Fixed — `sso/resolve` is now `GET /sso/resolve?email=...`, built via `GetRequiredQueryParameter` instead of
   deserializing the body into the MediatR query directly (matches the `DictionaryGetByIds` pattern). Frontend
   `identity-provider.service.ts` updated to call it as a GET.
