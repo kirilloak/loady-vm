@@ -87,8 +87,8 @@ retry converge after a download that completed remotely but failed before Terraf
    already carries `-o IdentitiesOnly=yes`.
 
 3. **Defaults.** Check `variables.tf` against the live host: `ipv4_cidr` (`192.168.1.51/24`) free
-   on the LAN and outside the router's DHCP pool, `ipv4_gateway` right for that LAN, `vm_id` (`201`)
-   free on the node. Override there or with `TF_VAR_*`.
+   on the LAN and reserved on the router by step 6 below, `ipv4_gateway` right for that LAN, `vm_id`
+   (`201`) free on the node. Override there or with `TF_VAR_*`.
 
 4. **The shell.** Add to `~/.zprofile` and `~/.zshrc` on the Mac:
 
@@ -115,7 +115,25 @@ retry converge after a download that completed remotely but failed before Terraf
    upgrade is run. `ld-tfd --rebuild` destroys it first and builds it again from the cloud image,
    and refuses while reachable uncommitted or unpushed work exists unless `--force` is explicit.
 
-6. **Reserve the address** on the router, outside the DHCP pool.
+6. **Reserve the address on the router.** The VM sets its own address from cloud-init and never
+   asks for a lease, so the router does not know the address is taken and hands it to whichever
+   client asks next. Both workstation VMs share the LAN, so both get a row. OPNsense, on the
+   `192.168.1.0/24` interface, under that interface's DHCP static mappings:
+
+   | MAC | Address | Name |
+   |---|---|---|
+   | `BC:24:11:0D:D3:5A` | `192.168.1.50` | `dev-vm` |
+   | `BC:24:11:C8:CE:2A` | `192.168.1.51` | `loady-vm` |
+
+   The mappings exist only to keep those two addresses out of the dynamic pool, since neither VM
+   will ever claim one. Check the pool range on the same interface and start it above `.51` if it
+   covers them: a pool that cannot reach the address is the version that cannot be got wrong. Tick
+   **Static ARP** on both rows so the firewall will not learn a different MAC for either address,
+   and leave the interface-wide static-ARP-only option off, which would block every unregistered
+   client on the LAN.
+
+   The cluster VMs' mappings say nothing about these two: `101`-`115` carry `tag=50` on their NIC
+   and are reserved on the VLAN 50 interface, while the workstation VMs are untagged on `vmbr0`.
 
 7. **Sign in on the VM.** Each of these is a browser or device flow that cannot be handed over as a
    token, so they are run through `ld-vm` from the Mac rather than by logging in:
@@ -168,6 +186,26 @@ which is what the caller is following.
 ld-vm 'tail -n 200 ~/.local/state/loady-vm/bootstrap/latest.log'
 terraform output bootstrap_log
 ```
+
+## Running but unreachable
+
+The symptom is the Proxmox console showing `starting serial terminal on interface serial0` and
+nothing more, while `ssh loady-vm` times out. Neither half is a hung VM. The console is a serial
+terminal (`vga = serial0` in `main.tf`) and only paints when the guest writes something, so an idle
+healthy machine shows exactly that one line; press Enter for a login prompt.
+
+The cause is an address collision on `192.168.1.51`, from the reservation in step 6 above being
+absent: another LAN client answers ARP for the address and the Mac caches that MAC. Seen repeatedly
+and diagnosed on 2026-09-15, with the VM running normally throughout, cron logging every two
+minutes, 88 seconds of CPU across the fifteen minutes it was "stuck".
+
+```bash
+arp -n 192.168.1.51                                  # on the Mac: must be bc:24:11:c8:ce:2a
+ssh root@192.168.1.22 ip neigh show 192.168.1.51     # what the bridge sees, which is the truth
+```
+
+Two different MACs is the collision. `sudo arp -d 192.168.1.51` on the Mac clears the wrong entry
+and restores access until it is relearned; the router reservation is the fix.
 
 ## Lost access
 

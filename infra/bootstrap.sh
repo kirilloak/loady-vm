@@ -600,6 +600,7 @@ if [[ -d "$VM_REPO" ]]; then
   [[ -x "$VM_REPO/scripts/link-agent-files.sh" ]] \
     || die "$VM_REPO/scripts/link-agent-files.sh is missing or not executable"
   "$VM_REPO/scripts/link-agent-files.sh" "$REPO"
+  "$VM_REPO/scripts/link-agent-files.sh" install
   if [[ -x "$VM_REPO/dotfiles/sync.sh" ]]; then
     "$VM_REPO/dotfiles/sync.sh" install
     "$VM_REPO/dotfiles/sync.sh" || git_todo="$git_todo

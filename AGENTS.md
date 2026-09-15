@@ -14,9 +14,11 @@ Every decision in this repository follows from these. They are not preferences.
 
 1. **`loady-one` is read-only to this setup.** No file is added, edited, committed or pushed
    there by anything here. The agent instruction files appear inside that checkout as symlinks
-   into this repository (`scripts/link-agent-files.sh`), and `.idea/` is already covered by that
-   repository's own `.gitignore`. `git status` in `loady-one` must always be empty of anything
-   this setup created.
+   into this repository — at its root, in `backend/` and in `infra/`, where `AGENTS.md` and
+   `CLAUDE.md` are two names for one file, placed by `scripts/link-agent-files.sh` and kept there
+   by a crontab line it installs. `.idea/` is already covered by that repository's own `.gitignore`; everything else
+   goes into the checkout's `.git/info/exclude`, which is never pushed. `git status` in
+   `loady-one` must always be empty of anything this setup created.
 
 2. **Git is manual. No agent and no script commits, pushes, merges, rebases, opens a pull request
    or deletes a branch — in either repository, ever.** Work ends in the working tree. The founder
@@ -77,7 +79,10 @@ One fact, one file. Two files stating the same thing will disagree eventually.
 | Local services | `compose/loady-vm.yaml` |
 | The function hosts and their ports | `compose/processes.json` |
 | Agent and Rider configuration on the VM | `dotfiles/` and its `README.md` |
-| Loady's own backend conventions | `agents/backend/CLAUDE.md` |
+| The `loady-one` checkout as a whole | `agents/loady-one/AGENTS.md` |
+| Loady's own backend conventions | `agents/backend/AGENTS.md` |
+| Loady's Terraform conventions | `agents/infrastructure/AGENTS.md` |
+| Placing all of those in a checkout | `scripts/link-agent-files.sh` |
 | Plans and their results | `plans/` |
 
 Link between files with repository-root-relative paths.

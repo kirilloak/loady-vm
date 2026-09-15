@@ -7,7 +7,7 @@ thin client — Rider's UI, a browser, a terminal.
 Everything about the setup lives here, so that nothing about it lives in `loady-one`.
 
 ```
-agents/          the Loady agent instruction files, symlinked into the checkout
+agents/          the Loady agent instruction files, symlinked into the checkout and its worktrees
 compose/         local services and the function-host manifest
 docs/            architecture, Rider, ports, boundaries, secrets
 dotfiles/        agent and Rider configuration on the VM, with its own sync
@@ -54,7 +54,9 @@ The VM itself is built by `infra/README.md`. What the Mac needs, once, so that `
 
 Then `ssh loady-vm true` should succeed. If it does not, the VM is probably powered off: only one
 workstation VM runs at a time, so `vm-loady` starts it and stops the other. That command lives in
-the costfluent repository, which owns the Proxmox host.
+the costfluent repository, which owns the Proxmox host. If it is running and still unreachable,
+another LAN client has taken its address — `infra/README.md` has the check and the router
+reservation that prevents it.
 
 ## Commands
 
@@ -74,7 +76,7 @@ the costfluent repository, which owns the Proxmox host.
 | `ld-cosmos-cert [--print]`                               | trust the Cosmos emulator's certificate (`ld-reset` does it already) |
 | `ld-add`, `ld-update`, `ld-remove`                       | EF migrations                                                        |
 | `ld-stn`, `ld-st`, `ld-stl`, `ld-str`                    | worktrees                                                            |
-| `ld-agents`                                              | link the agent files and Rider run configurations into a checkout    |
+| `ld-agents [--all]`                                      | link the agent files and Rider run configurations into a checkout    |
 
 ## One thing to know before using it
 

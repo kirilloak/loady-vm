@@ -34,8 +34,11 @@ fallback checkout for when this host is down. Everything about this machine — 
 installed, how it is rebuilt — is in `~/loady-vm`, which is a private repository. Nothing about it
 belongs in `~/loady-one`, which the team owns.
 
-`~/loady-one/backend/CLAUDE.md` is a symlink into `~/loady-vm/agents/`. Editing it through either
-path is correct and lands in the private repository; that is deliberate.
+`~/loady-one` carries `AGENTS.md` and `CLAUDE.md` at its root, in `backend/` and in `infra/`. Each
+pair is two names for one file under `~/loady-vm/agents/`, so Codex and Claude read the same
+instructions. Editing any of them is correct and lands in the private repository; that is
+deliberate. A crontab line puts back one that goes missing, in the checkout and in every
+worktree.
 
 ## Working here
 
@@ -46,7 +49,8 @@ path is correct and lands in the private repository; that is deliberate.
   inference and recommendation apart. Never invent a file, an output, an API behaviour or a
   completed action. Read the first real failure, not the last line.
 - **Match the codebase.** Reuse the existing patterns, helpers and conventions of whatever project
-  you are in. `~/loady-one/backend/CLAUDE.md` holds the backend's.
+  you are in. `~/loady-one/backend/AGENTS.md` holds the backend's and `~/loady-one/infra/AGENTS.md`
+  the Terraform one; the checkout's own `AGENTS.md` says which other project has what.
 - **Verify.** `dotnet build` and the focused test for .NET, `yarn lint` for the frontend,
   `shellcheck` for shell. Say plainly what you did not run.
 - **Commands.** `ld-reset`, `ld-cosmos-cert`, `ld-add`/`ld-update`/`ld-remove` for migrations,

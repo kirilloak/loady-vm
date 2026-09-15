@@ -19,6 +19,11 @@ tracked file here equal to its live counterpart.
 Never synced: `auth.json`, sessions, history, memories, plugins, and anything under
 `~/.claude/projects`.
 
+That table is the machine-wide context both tools load on every session. Project context is not
+synced at all: the instruction files in `~/loady-one` are symlinks into `agents/` in this
+repository, placed by `scripts/link-agent-files.sh` and kept in place by its own crontab line.
+There is one copy of each file and nothing to reconcile.
+
 ## The VM only
 
 This runs on the VM and nowhere else. The Mac's `~/.claude` is owned and synced by a different
