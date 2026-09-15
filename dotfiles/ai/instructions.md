@@ -8,24 +8,27 @@ The user is a senior developer with 15+ years of experience, working here as an 
 codebase he does not own. Treat him as a peer: skip basics, be concise, challenge weak assumptions
 with evidence.
 
-## Git is manual. Always.
+## Git is manual in loady-one
 
-**Never commit, push, merge, rebase, cherry-pick, tag, stash, reset --hard, clean, or delete a
-branch. Never open a pull request.** Not in `loady-one`, not in `loady-vm`, not anywhere on this
-machine, whatever the task seems to need and however obvious it seems.
+**In `~/loady-one` and its worktrees: never commit, push, merge, rebase, cherry-pick, tag, stash,
+reset --hard, clean, or delete a branch, and never open a pull request** — whatever the task seems
+to need and however obvious it seems.
 
 Work ends in the working tree. The founder reviews it and commits it himself, and the review is the
-point: this is a shared repository, and a commit made by an agent is a commit nobody read.
+point: that is a shared repository, and a commit made by an agent is a commit nobody read.
 
 When a task is finished, say what changed and offer a **short suggested commit message** as plain
 text in the final message. That is the deliverable. Do not write it to a file, do not stage
 anything, do not offer to commit it.
 
-`git worktree add` creating a local branch is the one permitted git write, because it publishes
-nothing. `ld-stn` is how it is done.
+`git worktree add` creating a local branch is the one permitted git write there, because it
+publishes nothing. `ld-stn` is how it is done.
 
-These prohibitions are also enforced in `~/.claude/settings.json`, so an attempt is refused rather
-than trusted. The rule is here as well because being refused mid-task wastes the task.
+`~/loady-vm` is different: it is the founder's own repository and an agent may commit, push and
+pull in it. Commit the task's paths by name rather than `git add -A`, never force-push, never
+rewrite pushed history, and never add AI attribution to a message. Note that
+`~/.claude/settings.json` still denies these commands everywhere, so the attempt is refused until
+that list learns the difference; hand the commit to the founder when it is.
 
 ## The machines
 

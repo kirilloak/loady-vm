@@ -22,17 +22,29 @@ Every decision in this repository follows from these. They are not preferences.
    `.git/info/exclude`, which is never pushed. `git status` in `loady-one` must always be empty of
    anything this setup created.
 
-2. **Git is manual. No agent and no script commits, pushes, merges, rebases, opens a pull request
-   or deletes a branch — in either repository, ever.** Work ends in the working tree. The founder
-   reviews and commits it. An agent that has finished a task offers a short suggested commit
-   message as plain text in its final message and stops there.
+2. **Git is manual in `loady-one`, and an agent's own in `loady-vm`.** The two repositories are
+   not alike: one is the team's and one is the founder's.
 
-   This is not advisory. `dotfiles/ai/claude/settings.json` denies those commands at the harness
-   level, so an agent that tries is refused rather than trusted. If a task seems to require a
-   commit, it does not: say what is ready and stop.
+   In **`loady-one`**, no agent and no script commits, pushes, merges, rebases, opens a pull
+   request or deletes a branch, ever. Work ends in the working tree; the founder reviews and
+   commits it, and the review is the point, because a commit made by an agent is a commit nobody
+   read. An agent that has finished offers a short suggested commit message as plain text in its
+   final message and stops there. `git worktree add` creating a local branch (`ld-stn`) is the one
+   permitted write: it publishes nothing.
 
-   The single exception is `git worktree add` creating a local branch (`ld-stn`). It publishes
-   nothing.
+   In **this repository**, an agent may commit, push and pull freely. It is the founder's own, on
+   his own GitHub account, and nobody else pulls from it. The care that remains is ordinary: commit
+   the task's paths by name rather than `git add -A`, never force-push, never rewrite history that
+   is already pushed, and write the message in plain imperative language with no AI attribution of
+   any kind. Pull before editing a checkout that may be behind — the Mac's and the VM's are two
+   ordinary checkouts and nothing but GitHub synchronises them.
+
+   One gap to know about: `dotfiles/ai/claude/settings.json` still denies `git commit`, `git push`
+   and the rest for every repository at the harness level, so a Claude agent is refused in this one
+   too. Until that list can tell the two apart — a `PreToolUse` hook that allows the write only
+   when the repository root is `~/loady-vm` is the obvious shape — the second half of this rule is
+   intent rather than capability, and an agent working here still hands its commit to the
+   founder.
 
 3. **Two checkouts on the VM, two remotes, one key each.** `~/loady-one` over
    `git@ssh.dev.azure.com` with the Loady key, and `~/loady-vm` — this repository — over

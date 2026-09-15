@@ -80,5 +80,6 @@ reservation that prevents it.
 
 ## One thing to know before using it
 
-No script here commits or pushes anything, and neither may an agent. Work ends in the working tree and the founder
-commits it. `AGENTS.md` rule 2 has the full statement and the reason.
+No script here commits or pushes anything. Neither may an agent in `loady-one`, which the team owns: work ends in
+the working tree and the founder commits it. This repository is the founder's own, so an agent may commit, push and
+pull here. `AGENTS.md` rule 2 has the full statement, the reason, and the one thing still blocking it.
