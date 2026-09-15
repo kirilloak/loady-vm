@@ -141,7 +141,7 @@ points, but an `@` import inside it is not resolved when the target is outside t
 directory — and the target of a link into `~/loady-vm` always is. The pointer loaded nothing, in
 every arrangement tried: relative import, dot-relative, absolute, symlinked target, real target.
 The cases are in
-[plans/2026_09_15_agent_files_agents_md_and_cron_result.md](../plans/2026_09_15_agent_files_agents_md_and_cron_result.md).
+[plans/done/2026_09_15_agent_files_agents_md_and_cron_result.md](../plans/done/2026_09_15_agent_files_agents_md_and_cron_result.md).
 
 That is the specific reason, and the general one is the same shape. A command-line tool that walks a
 project — resolving a path, indexing a tree, watching for changes, deciding what is "inside" the
@@ -177,9 +177,9 @@ written, and `loady-one` must never show it, but losing the VM must not lose it 
 
 | In the checkout | In this repository |
 |---|---|
-| `backend/plans/`, in the primary checkout | `plans/loady-one/backend/` |
-| `infra/plans/`, in the primary checkout | `plans/loady-one/infra/` |
-| either of them, in a worktree named `x` | `plans/loady-one/worktrees/x/...` |
+| `backend/plans/`, in the primary checkout | `plans/backend/` |
+| `infra/plans/`, in the primary checkout | `plans/infra/` |
+| either of them, in a worktree named `x` | `plans/worktrees/x/...` |
 
 There is no state and no conflict to detect: the checkout is the author, so a file that differs is
 overwritten here. Editing an archived plan in `loady-vm` while the checkout still holds the file is
@@ -187,7 +187,7 @@ undone on the next pass; edit the copy in the checkout.
 
 Nothing is deleted, on either side. A plan removed from the checkout keeps its copy here, which is
 the point of an archive; remove that one too when you want it gone. A worktree's plans outlive the
-worktree, so `ld-str` leaves a directory under `worktrees/` for you to clear.
+worktree, so `ld-str` leaves a directory under `plans/worktrees/` for you to clear.
 
 Restoring is by hand for the same reason: an automatic one would bring a deleted plan back a minute
 later. After a rebuild:

@@ -30,7 +30,7 @@
 # one side is deleted from the other. A directory with no sync history is only ever added to.
 #
 # backend/plans/ and infra/plans/ go the other way and only the other way: an agent writes a plan
-# in the checkout, the checkout never shows it, and a copy lands under plans/loady-one/ here so that
+# in the checkout, the checkout never shows it, and a copy lands under plans/ here so that
 # destroying the VM loses none of them. The checkout always wins, nothing is ever deleted in either
 # place, and nothing is written back into the checkout by a normal pass. `restore` is the one
 # command that puts an archive back, into a checkout that lost it.
@@ -69,13 +69,13 @@ DIR_PAIRS=(
   "dotfiles/rider/run|backend/.run"
 )
 
-# <directory under the checkout> | <directory under plans/loady-one/ here>. One way, checkout to
-# here. Adding a third project is one line.
+# <directory under the checkout> | <directory under plans/ here>. One way, checkout to here.
+# Adding a third project is one line.
 ARCHIVE_DIRS=(
   "backend/plans|backend"
   "infra/plans|infra"
 )
-ARCHIVE_ROOT="$VM_REPO/plans/loady-one"
+ARCHIVE_ROOT="$VM_REPO/plans"
 
 # Directories the checkout must ignore for reasons other than the tables above: Rider's own
 # directory.
@@ -268,7 +268,7 @@ sync_dir() {
 }
 
 archive_dest() {
-  # archive_dest <checkout> <directory under plans/loady-one>: where that checkout's plans are
+  # archive_dest <checkout> <directory under plans/>: where that checkout's plans are
   # archived. The primary checkout owns the top level and a worktree its own subdirectory, so two
   # checkouts holding the same dated file name cannot overwrite each other, and a worktree's plans
   # outlive the worktree.

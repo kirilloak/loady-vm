@@ -6,7 +6,7 @@ Status: complete. Nothing is committed; the working tree in `~/loady-vm` on the 
 for the founder to review and commit (rule 2).
 
 Founder decisions taken: both recommendations accepted. The archive lives under
-`plans/loady-one/`, and a worktree's plans are archived under `plans/loady-one/worktrees/<name>/`.
+`plans/`, and a worktree's plans are archived under `plans/worktrees/<name>/`.
 
 ## Files created or edited
 
@@ -20,7 +20,7 @@ Founder decisions taken: both recommendations accepted. The archive lives under
 - `agents/backend/AGENTS.md` — the `## Plans` section now names `backend/plans/` and says the
   directory is invisible to `loady-one` and archived automatically.
 - `agents/infra/AGENTS.md` — the same section, new; the file had none.
-- `plans/loady-one/` — the archive itself, created by the first pass: four files from the primary
+- `plans/` — the archive itself, created by the first pass: four files from the primary
   checkout (three under `backend/`, one under `infra/`).
 
 No change to `infra/bootstrap.sh`, `scripts/loady-shell.zsh` or the crontab: the cron line, the
@@ -29,11 +29,16 @@ the wrapper forwards its arguments.
 
 ## Manual actions for the founder
 
-- Commit the working tree above, including the new `plans/loady-one/` directory. Until that
+- Commit the working tree above, including the new `plans/` directory. Until that
   happens the archive exists on the VM only, which is the thing this change is meant to prevent.
 - Pull on the Mac before touching its checkout; this was written on the VM (rule 5).
 
 ## Notes
+
+- The layout changed after the plan was written and after the first commit: the archive was
+  `plans/loady-one/<project>/` and is now `plans/<project>/`, with worktrees under
+  `plans/worktrees/<name>/`. The plan text still describes the earlier shape. The founder also
+  filed the finished plan pairs into `plans/done/`, which is where this file now lives.
 
 - `~/loady-one/infra/plans/` was untracked and ignored by nothing when this started, so it was
   showing in that repository's `git status`. It is excluded now.
@@ -49,14 +54,14 @@ All on the VM, against the real checkout unless stated.
 - `bash -n scripts/sync-agent-files.sh`: clean.
 - `shellcheck scripts/sync-agent-files.sh`: SC2034 (`LD_PROG`) and SC1091 (`lib.sh`) only, both
   present on `HEAD` before the change.
-- First pass created `plans/loady-one/{backend,infra}/` with the four existing plan files;
+- First pass created `plans/{backend,infra}/` with the four existing plan files;
   `git -C ~/loady-one status --short` empty; `/infra/plans/` appended to `.git/info/exclude`.
 - A new file in `backend/plans/` was archived on the next pass; editing it in the checkout
   re-archived it; editing the archived copy while the checkout still held the file was overwritten
   on the next pass; deleting it in the checkout left the archived copy in place. Probe file removed
   from both sides afterwards.
 - A scratch checkout under a temporary `LOADY_WORKTREES` archived to
-  `plans/loady-one/worktrees/probewt/{backend,infra}/`, confirming the per-checkout keying. Removed
+  `plans/worktrees/probewt/{backend,infra}/`, confirming the per-checkout keying. Removed
   afterwards.
 - `restore` into an empty checkout wrote all four files into `backend/plans/` and `infra/plans/`;
   a second run wrote none and named all four as already there; `restore ~/loady-one` wrote none.
