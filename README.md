@@ -78,6 +78,7 @@ open.
 | `ld-reset [--hard]`                                      | recreate the containers and run both seeders                         |
 | `ld-cosmos-cert [--print]`                               | trust the Cosmos emulator's certificate (`ld-reset` does it already) |
 | `ld-user [email]`                                        | local Cosmos user a DEV B2C token resolves to (`ld-reset` does it)   |
+| `ld-sql [file... \| -q <sql>]`                            | apply `sql/post-reset/` to the local SQL Server (`ld-reset` does it) |
 | `ld-add`, `ld-update`, `ld-remove`                       | EF migrations                                                        |
 | `ld-pr <id-or-url>`                                       | read a PR's details and comment threads (read-only)                  |
 | `ld-stn`, `ld-st`, `ld-stl`, `ld-str`                    | worktrees                                                            |

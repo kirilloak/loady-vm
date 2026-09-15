@@ -57,6 +57,9 @@ ld-reset()   { ld_run scripts/ld-reset.sh "$@"; }
 # this itself; run it by hand after an emulator reset done another way, or with --print to copy
 # the certificate to the Mac for a browser or a Mac-side client.
 ld-cosmos-cert() { ld_run scripts/cosmos-cert.sh "$@"; }
+# Configuration rows the seeders do not write, from sql/post-reset/. ld-reset applies them; this
+# applies them again, or one file, or one statement: ld-sql -q "SELECT 1".
+ld-sql() { ld_run scripts/ld-sql.sh "$@"; }
 # A local Cosmos user the DEV B2C token resolves to, for the `be-backend-sso` configurations.
 # Defaults to the checkout's git email; without it every authenticated request is a 401.
 ld-user() { ld_run scripts/ld-user.py "$@"; }

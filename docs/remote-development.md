@@ -87,6 +87,7 @@ ld-reset            # wipe, start and seed the five backing services; --hard cle
 # Rider: stack-all
 # Rider: stack-public-apis when the public surface is needed
 ld-cosmos-cert      # refresh Cosmos trust manually; ld-reset already does it
+ld-sql              # apply sql/post-reset again by hand; ld-reset already does it
 ld-user             # local SSO user again, by hand; ld-reset already does it
 ```
 
@@ -114,6 +115,36 @@ ld-remove
 They pass the connection string as `-- --connection ...` rather than relying on the environment,
 because `AppDbContextDesignFactory` reads the argument first and only that is guaranteed to be
 present in an agent's non-interactive shell.
+
+### Configuration the seeders do not write
+
+Some rows are neither schema nor test data: the SSO identity providers, and whatever else turns out
+to belong to a working local environment rather than to a migration. The seeders do not write them,
+so every `ld-reset` leaves the table empty and the feature quietly does nothing.
+
+`sql/post-reset/` holds them as plain `.sql` files, applied in name order against the local SQL
+Server. `ld-reset` runs the directory after both seeders. Adding another is a file:
+
+```bash
+sql/post-reset/010-sso-identity-providers.sql    # numbered so the order is the file name
+sql/post-reset/020-whatever-comes-next.sql
+```
+
+**Every file must be safe to apply twice.** `ld-reset` drops the databases before calling this, but
+applying the directory by hand against a live database is the normal case, and a plain `INSERT`
+would duplicate the row. Write a `MERGE`, or guard with `IF NOT EXISTS`; the SSO file is the shape
+to copy.
+
+By hand:
+
+```bash
+ld-sql                                           # the whole directory again
+ld-sql sql/post-reset/020-whatever-comes-next.sql   # one file
+ld-sql -q "SELECT Domain, IsEnabled FROM SsoIdentityProviders"
+```
+
+It runs on the VM and goes through the `sqlserver` container's own `sqlcmd`, so nothing has to be
+installed on the host, and `-b` makes a SQL error fail the command rather than scroll past.
 
 ### The SSO user
 

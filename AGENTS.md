@@ -97,6 +97,7 @@ One fact, one file. Two files stating the same thing will disagree eventually.
 | The Bitwarden register and recovery | `docs/manual-secrets.md` |
 | The `ld-*` command surface | `scripts/loady-shell.zsh` |
 | Local services | `compose/loady-vm.yaml` |
+| Configuration rows the seeders do not write | `sql/post-reset/` |
 | The function hosts and their ports | `compose/processes.json` |
 | Agent and Rider configuration on the VM | `dotfiles/` and its `README.md` |
 | The `loady-one` checkout as a whole | `agents/loady-one/AGENTS.md` |

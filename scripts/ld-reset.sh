@@ -125,6 +125,11 @@ ld_log "seeding test data"
     dotnet Loady.TestDataSeeder.dll
 )
 
+# Configuration rows the seeders do not write, from sql/post-reset/. Every file there is
+# re-runnable, so this is safe whether or not the databases were just dropped.
+ld_log "post-reset SQL"
+"$HERE/ld-sql.sh"
+
 # The seeders know nothing about the founder, and the DEV B2C configurations resolve their user by
 # email against this emulator, so a reset leaves `be-backend-sso` returning 401 until this runs.
 # A warning rather than a failure: the reset itself has succeeded by here, and the only thing that
