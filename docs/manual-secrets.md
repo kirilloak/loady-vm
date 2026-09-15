@@ -11,7 +11,7 @@ tracked because item ids are identifiers, not secrets.
 | Item                    | Fields used                  | Used for                                                                      |
 |-------------------------|------------------------------|-------------------------------------------------------------------------------|
 | `dev-infra/dev-proxmox` | login password               | `root@pam` on the Proxmox API — creating the VM, and `vm-loady`/`vm-dev`      |
-| `workstation/loady`     | `ssh_loady_git_base64`, `ado_pat_readonly` | the git key, and a read-only PAT for `ld-pr` (both Azure DevOps)|
+| `workstation/loady`     | `ssh_loady_git_base64`, `azure_devops_token` | the git key, and a read-only PAT for `ld-pr` (both Azure DevOps)|
 | `workstation/keys`      | `ssh_dev_vm_github_base64`   | the key it writes for `~/loady-vm` (GitHub) — `dev-vm-github`                 |
 | `prod-infra/prod-github`| `pat`                        | `GH_TOKEN` on the VM, and pinning GitHub's SSH host keys from the API         |
 
@@ -140,16 +140,16 @@ is absent the bootstrap still converges and says so in its closing todo list.
 
 ## The Azure DevOps PAT
 
-The second field on `workstation/loady`, `ado_pat_readonly`, is a PAT scoped to **Code: Read** only on the
+The second field on `workstation/loady`, `azure_devops_token`, is a PAT scoped to **Code: Read** only on the
 `Loady-Logistics` org — nothing else, so it cannot open, comment on, or merge anything even if misused. `ld-pr` is the
 only thing that reads it.
 
-Create it at the org's **Personal access tokens** page (user icon, top right, in Azure DevOps), named `ado_pat_readonly`
+Create it at the org's **Personal access tokens** page (user icon, top right, in Azure DevOps), named `azure_devops_token`
 - same name as the Bitwarden field, so there is one identifier for this PAT everywhere instead of two - scope **Custom
 defined** with **Code** set to **Read**, expiration whatever is convenient. It is shown once; paste it straight into a
-new **hidden** custom field named `ado_pat_readonly` on `workstation/loady` and save.
+new **hidden** custom field named `azure_devops_token` on `workstation/loady` and save.
 
-Azure DevOps enforces expiry on PATs the same way it does on the SSH key above, so `ado_pat_readonly` will eventually
+Azure DevOps enforces expiry on PATs the same way it does on the SSH key above, so `azure_devops_token` will eventually
 need regenerating. There is no email warning for a PAT the way there is for the SSH key; the first sign is `ld-pr`
 failing with an auth error, at which point regenerate under the same name and update the field.
 
