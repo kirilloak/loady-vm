@@ -749,6 +749,13 @@ Auth: `LocalhostAuthenticationMiddleware.cs` with `x-user-id` header
 - Ask before stopping a process that predates the task, belongs to the user, or has uncertain ownership.
 - Before stopping anything, resolve the exact process and avoid broad name-based termination commands.
 
+### Azure DevOps PRs
+
+Given a PR id or an `https://dev.azure.com/.../pullrequest/<id>` link, run `ld-pr <id-or-url>` to read
+its details and comment threads. Read-only, uses the PAT at `~/.config/loady/ado-pat` (or
+`AZURE_DEVOPS_PAT`). Do not fall back to `az repos` (denied at the tool layer) or hand-rolled `curl`
+unless `ld-pr` itself is broken.
+
 ### Local DB Access
 
 Read-only by default. Never run destructive queries without explicit user approval.
