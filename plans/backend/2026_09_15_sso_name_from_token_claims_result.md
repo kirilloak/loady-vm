@@ -42,9 +42,14 @@ any repo) is not applied anywhere - full instructions are inlined below in "Load
 - `plans/done/sso-docs.md` (actual location of the doc named in the plan as `backend/plans/sso-docs.md`) - documented
   the optional Given Name/Surname application claims and identity-provider claims mapping, and the auto-fill behavior
   under "Good to know".
-- `~/loady-vm/integrations/sso-idp-tomorrowops/variables.tf` - `test_users` object type gained two optional fields,
-  `given_name` and `surname` (`optional(string)`, so existing untracked tfvars entries that don't set them still apply
-  cleanly).
+- `~/loady-vm/integrations/sso-idp-tomorrowops/variables.tf` - two changes:
+  - `test_users` object type gained two optional fields, `given_name` and `surname` (`optional(string)`, so existing
+    untracked tfvars entries that don't set them still apply cleanly).
+  - Per explicit founder instruction ("add to variables.tf, modify this repo, allowed"), `test_users`' `default`
+    changed from `{}` to a map containing one entry, `sso@tomorrowops.com`, with a placeholder password
+    (`REPLACE_ME_BEFORE_APPLYING`) - a second test user, added directly to this tracked file rather than an
+    untracked tfvars file. **This is a full-replacement default, not additive** - see the destroy-risk warning in
+    "Manual actions" below before applying.
 - `~/loady-vm/integrations/sso-idp-tomorrowops/main.tf` - two changes:
   - `azuread_user.test` now passes `given_name`/`surname` through from `var.test_users[each.key]`.
   - `azuread_application.oidc` gained an `optional_claims { id_token { name = "given_name" } id_token { name =
@@ -86,6 +91,21 @@ any repo) is not applied anywhere - full instructions are inlined below in "Load
   doesn't set matching `given_name`/`surname`, a future `terraform apply` would push `null` and erase the manual
   edit - Terraform now unconditionally manages these fields once a user is in the tfvars `test_users` map. Check
   `terraform plan` output before applying if unsure.
+- **Destroy risk from the new `test_users` default, 2026-09-15 - read before the next apply.** `test_users` is a
+  full-replacement map. There is no `.tfvars` file anywhere on this disk, so `kirill@tomorrowops.com` must be
+  supplied some other way at apply time (env var, external `-var-file`) - not from this repo. Two cases:
+  - If that external source is still supplied at apply time, it fully overrides the new `default` in
+    `variables.tf` - the `sso@tomorrowops.com` default is inert until `sso@tomorrowops.com` is added to that same
+    external source (or the external source is retired in favor of this file).
+  - If nothing external is supplied, this file's `default` becomes authoritative - and since it only lists
+    `sso@tomorrowops.com`, `terraform plan` would show `azuread_user.test["kirill@tomorrowops.com"]` being
+    **destroyed**. Do not apply if `terraform plan` shows that destroy - merge `kirill@tomorrowops.com`'s entry
+    (with matching `given_name`/`surname` per the drift-risk bullet above) into whichever source stays
+    authoritative first.
+  - Also replace the placeholder password `"REPLACE_ME_BEFORE_APPLYING"` on the `sso@tomorrowops.com` entry before
+    applying - Terraform will create the user with that literal string otherwise. This password is now committed
+    to a tracked file if you commit it, unlike other test users' passwords, which lived only in the untracked
+    tfvars file and in Terraform state.
 - Configure Loady B2C per "Loady B2C configuration" below, for every environment/customer this ships to.
 - Whether other SSO customers besides BASF/tomorrowops are live and would need the same two B2C settings is still open
   per the plan's own "Assumptions" section - not verifiable from this repo; check with Nelia/Heinz which environments
