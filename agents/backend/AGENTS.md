@@ -789,4 +789,9 @@ Types: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`
 
 ## Plans
 
-Store in `plans/YYYY_MM_DD_{plan_name}.md`. Get user confirmation before code modifications.
+Store in `backend/plans/YYYY_MM_DD_{plan_name}.md`. Get user confirmation before code
+modifications.
+
+That directory is invisible to this repository and is never committed here: it is excluded locally
+and copied out to the founder's own repository once a minute, so a plan survives the machine. Write
+plans there and nowhere else, and do not copy them anywhere.

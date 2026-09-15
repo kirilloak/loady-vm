@@ -29,6 +29,12 @@
 # that appears on either side is copied to the other; a file that had been synced and is now gone on
 # one side is deleted from the other. A directory with no sync history is only ever added to.
 #
+# backend/plans/ and infra/plans/ go the other way and only the other way: an agent writes a plan
+# in the checkout, the checkout never shows it, and a copy lands under plans/loady-one/ here so that
+# destroying the VM loses none of them. The checkout always wins, nothing is ever deleted in either
+# place, and nothing is written back into the checkout by a normal pass. `restore` is the one
+# command that puts an archive back, into a checkout that lost it.
+#
 # Whatever the checkout does not ignore itself is added to .git/info/exclude, which is local to the
 # checkout and never pushed. That is checked rather than assumed, per path.
 #
@@ -40,6 +46,7 @@
 #   sync-agent-files.sh --all           the primary checkout and every worktree
 #   sync-agent-files.sh --all --quiet   the same, silent unless something changed or refused
 #   sync-agent-files.sh install         install the cron trigger (VM only)
+#   sync-agent-files.sh restore [chk]   copy archived plans back into a checkout that lost them
 set -euo pipefail
 LD_PROG=ld-agents
 # shellcheck source=scripts/lib.sh
@@ -62,9 +69,17 @@ DIR_PAIRS=(
   "dotfiles/rider/run|backend/.run"
 )
 
-# Directories the checkout must ignore for reasons other than the two tables above: Rider's own
-# directory, and the plans an agent writes in a worktree.
-EXTRA_EXCLUDES=(backend/plans/ .idea/)
+# <directory under the checkout> | <directory under plans/loady-one/ here>. One way, checkout to
+# here. Adding a third project is one line.
+ARCHIVE_DIRS=(
+  "backend/plans|backend"
+  "infra/plans|infra"
+)
+ARCHIVE_ROOT="$VM_REPO/plans/loady-one"
+
+# Directories the checkout must ignore for reasons other than the tables above: Rider's own
+# directory.
+EXTRA_EXCLUDES=(.idea/)
 
 QUIET=0
 CONFLICTS=0
@@ -252,6 +267,66 @@ sync_dir() {
   done
 }
 
+archive_dest() {
+  # archive_dest <checkout> <directory under plans/loady-one>: where that checkout's plans are
+  # archived. The primary checkout owns the top level and a worktree its own subdirectory, so two
+  # checkouts holding the same dated file name cannot overwrite each other, and a worktree's plans
+  # outlive the worktree.
+  local repo="$1" name="$2"
+  if [[ "$repo" == "$LOADY_REPO" ]]; then
+    printf '%s/%s\n' "$ARCHIVE_ROOT" "$name"
+  else
+    printf '%s/worktrees/%s/%s\n' "$ARCHIVE_ROOT" "${repo##*/}" "$name"
+  fi
+}
+
+archive_dir() {
+  # archive_dir <live directory> <destination> <relative path>: copy every regular file under the
+  # live directory into the destination, at any depth, when it is missing there or differs.
+  #
+  # One way, and no state: the checkout is where a plan is written, so it always wins and there is
+  # no conflict to detect. Nothing is deleted on either side, which is the archive's whole purpose:
+  # a plan removed from the checkout keeps its copy here until the founder removes that too.
+  local live_dir="$1" dest_dir="$2" rel="$3" file sub
+  [[ -d "$live_dir" ]] || return 0
+  while IFS= read -r file; do
+    sub="${file#"$live_dir"/}"
+    if [[ -f "$dest_dir/$sub" ]] && cmp -s "$file" "$dest_dir/$sub"; then
+      continue
+    fi
+    write_file "$file" "$dest_dir/$sub"
+    echo "    <- ${dest_dir#"$VM_REPO"/}/$sub"
+  done < <(find "$live_dir" -type f -print | sort)
+}
+
+restore_checkout() {
+  # restore_checkout <checkout>: put the archive back into a checkout that lost it, which in
+  # practice means a rebuilt VM. By hand and never from cron: if a normal pass wrote into the
+  # checkout, a plan deleted there would reappear a minute later.
+  #
+  # A file that already exists in the checkout is left alone and named. The checkout's copy is the
+  # authority everywhere else in this script and it stays the authority here.
+  local repo="$1" entry rel src file sub written=0 kept=0
+  [[ -d "$repo/.git" || -f "$repo/.git" ]] || ld_die "not a git checkout: $repo"
+  for entry in "${ARCHIVE_DIRS[@]}"; do
+    rel="${entry%%|*}"
+    src="$(archive_dest "$repo" "${entry#*|}")"
+    [[ -d "$src" ]] || continue
+    while IFS= read -r file; do
+      sub="${file#"$src"/}"
+      if [[ -e "$repo/$rel/$sub" ]]; then
+        echo "    =  $rel/$sub already there"
+        kept=$((kept + 1))
+        continue
+      fi
+      write_file "$file" "$repo/$rel/$sub"
+      echo "    -> $rel/$sub"
+      written=$((written + 1))
+    done < <(find "$src" -type f -print | sort)
+  done
+  echo "==> restored $written file(s) into ${repo/#"$HOME"/\~}, left $kept in place"
+}
+
 exclude_one() {
   # exclude_one <repo> <exclude file> <path>: add one local exclusion, unless the checkout already
   # ignores the path or the entry is already there.
@@ -300,6 +375,11 @@ sync_checkout() {
     managed+=("$rel")
     exclude_one "$repo" "$exclude" "$rel/"
   done
+  for entry in "${ARCHIVE_DIRS[@]}"; do
+    rel="${entry%%|*}"
+    managed+=("$rel")
+    exclude_one "$repo" "$exclude" "$rel/"
+  done
   for rel in "${EXTRA_EXCLUDES[@]}"; do
     exclude_one "$repo" "$exclude" "$rel"
   done
@@ -320,6 +400,11 @@ sync_checkout() {
     managed+=("$dir")
     sync_dir "$repo" "$VM_REPO/$project" "$repo/$dir" "$dir"
   done
+  for entry in "${ARCHIVE_DIRS[@]}"; do
+    rel="${entry%%|*}"
+    [[ -d "$repo/$rel" ]] || continue
+    archive_dir "$repo/$rel" "$(archive_dest "$repo" "${entry#*|}")" "$rel"
+  done
 
   # The guarantee this script exists to provide, asserted rather than hoped for. Every path it
   # writes belongs here: one left out is one nobody notices in `git status` until it is pushed.
@@ -328,7 +413,7 @@ sync_checkout() {
   [[ -z "$dirty" ]] || ld_die "the checkout shows files this script placed as changes:
 $dirty"
 
-  ld_say "==> agent files and run configurations synced into ${repo/#"$HOME"/\~}"
+  ld_say "==> agent files, run configurations and plans synced into ${repo/#"$HOME"/\~}"
   return "$CONFLICTS"
 }
 
@@ -362,6 +447,12 @@ install_cron() {
   printf '%s\n%s\n' "$kept" "$line" | grep -v '^$' | crontab -
   echo "installed the agent files crontab entry (journalctl -t loady-agents)"
 }
+
+if [[ "${1:-}" == restore ]]; then
+  shift
+  restore_checkout "${1:-$(ld_repo)}"
+  exit 0
+fi
 
 if [[ "${1:-}" == install ]]; then
   ld_need crontab

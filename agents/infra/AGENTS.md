@@ -274,3 +274,11 @@ WAF security policy applied to all origins. PROD uses customer-managed TLS certi
 
 - Use `_local.tfvars` (gitignored) for local overrides
 - Bootstrap: `pwsh ./bootstrap.ps1`
+
+## Plans
+
+Store in `infra/plans/YYYY_MM_DD_{plan_name}.md`. Get user confirmation before code modifications.
+
+That directory is invisible to this repository and is never committed here: it is excluded locally
+and copied out to the founder's own repository once a minute, so a plan survives the machine. Write
+plans there and nowhere else, and do not copy them anywhere.

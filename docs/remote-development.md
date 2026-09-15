@@ -169,6 +169,35 @@ per checkout, so:
   synced and is now gone on one side is removed from both. Rider adds and deletes run
   configurations through its own UI, so both directions are real.
 
+### Plans go one way
+
+A plan an agent writes in the checkout is the opposite problem: the checkout is where it is
+written, and `loady-one` must never show it, but losing the VM must not lose it either. So
+`backend/plans/` and `infra/plans/` are excluded there and copied here, one way:
+
+| In the checkout | In this repository |
+|---|---|
+| `backend/plans/`, in the primary checkout | `plans/loady-one/backend/` |
+| `infra/plans/`, in the primary checkout | `plans/loady-one/infra/` |
+| either of them, in a worktree named `x` | `plans/loady-one/worktrees/x/...` |
+
+There is no state and no conflict to detect: the checkout is the author, so a file that differs is
+overwritten here. Editing an archived plan in `loady-vm` while the checkout still holds the file is
+undone on the next pass; edit the copy in the checkout.
+
+Nothing is deleted, on either side. A plan removed from the checkout keeps its copy here, which is
+the point of an archive; remove that one too when you want it gone. A worktree's plans outlive the
+worktree, so `ld-str` leaves a directory under `worktrees/` for you to clear.
+
+Restoring is by hand for the same reason: an automatic one would bring a deleted plan back a minute
+later. After a rebuild:
+
+```
+ld-agents restore              # or: scripts/sync-agent-files.sh restore ~/loady-one
+```
+
+It writes only files the checkout does not already have, and names the ones it left alone.
+
 A crontab line runs it over the checkout and every worktree, every minute:
 
 ```
