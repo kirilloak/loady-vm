@@ -1,0 +1,8 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="stack-be-fe-sso" type="CompoundRunConfigurationType">
+    <!-- The sso variant of stack-be-fe: be-backend-sso paired with fe-sso. -->
+    <toRun name="be-backend-sso" type="AzureFunctionAppRun" />
+    <toRun name="fe-sso" type="js.build_tools.npm" />
+    <method v="2" />
+  </configuration>
+</component>
