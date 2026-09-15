@@ -12,7 +12,17 @@
       "Read(//**)",
       "Read(~/**)",
       "WebSearch",
-      "WebFetch"
+      "WebFetch",
+      "Bash(ld-pr:*)",
+      "Bash(curl -s -u :*)",
+      "Bash(jq:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(dotnet build:*)",
+      "Bash(dotnet test:*)",
+      "Bash(sqlcmd:*)"
     ],
     "deny": [
       "Bash(git commit:*)",
