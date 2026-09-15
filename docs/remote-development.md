@@ -87,7 +87,7 @@ ld-reset            # wipe, start and seed the five backing services; --hard cle
 # Rider: stack-all
 # Rider: stack-public-apis when the public surface is needed
 ld-cosmos-cert      # refresh Cosmos trust manually; ld-reset already does it
-ld-user             # local Cosmos user for the be-backend-sso run configuration
+ld-user             # local SSO user again, by hand; ld-reset already does it
 ```
 
 Docker runs SQL Server, Cosmos DB, Redis, Azurite and the APIM proxy, and `ld-reset` verifies the
@@ -139,7 +139,9 @@ the user id, which otherwise derives from the email so that it is stable across 
 It runs on the VM, because Cosmos and Redis are the containers `ld-reset` starts there, and it
 fails with that advice if the emulator is not reachable. It writes the user and the matching
 `CompanyMembers` entry, then flushes the local Redis, without which the backend keeps serving the
-user it cached by mail before the row existed. `ld-reset` wipes the data, so run it again after one.
+user it cached by mail before the row existed. `ld-reset` wipes the data, so it runs this itself as
+its last step, and a failure there is a warning rather than a failed reset. The calls above are for
+a second address, a different company or role, or a user needed without a reset.
 
 ## Agent instructions in the checkout
 

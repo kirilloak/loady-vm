@@ -18,7 +18,7 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=scripts/lib.sh
 source "$HERE/lib.sh"
 
-ld_need az docker jq dotnet
+ld_need az docker jq dotnet python3
 
 REPO="$(ld_repo)"
 HARD=0
@@ -124,5 +124,12 @@ ld_log "seeding test data"
   AZURE_FUNCTIONS_ENVIRONMENT=Localhost EnvironmentName=Localhost \
     dotnet Loady.TestDataSeeder.dll
 )
+
+# The seeders know nothing about the founder, and the DEV B2C configurations resolve their user by
+# email against this emulator, so a reset leaves `be-backend-sso` returning 401 until this runs.
+# A warning rather than a failure: the reset itself has succeeded by here, and the only thing that
+# usually goes wrong is an unset git email, which matters to one run configuration out of twenty.
+ld_log "local SSO user"
+(cd "$REPO" && "$HERE/ld-user.py") || ld_warn "ld-user failed; the *-sso run configurations will 401 until it runs"
 
 ld_log "containers ready and seeded. In Rider: 'stack-all'."
