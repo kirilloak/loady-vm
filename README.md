@@ -66,6 +66,9 @@ reservation that prevents it.
 [ -f "$HOME/loady-vm/scripts/loady-shell.zsh" ] && source "$HOME/loady-vm/scripts/loady-shell.zsh"
 ```
 
+A command added to that file exists only in shells started after it; `exec zsh` in the ones already
+open.
+
 |                                                          |                                                                      |
 |----------------------------------------------------------|----------------------------------------------------------------------|
 | `ld-vm <cmd>`                                            | run a command on the VM, from the checkout                           |

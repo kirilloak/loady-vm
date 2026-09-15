@@ -90,14 +90,6 @@ ld-cosmos-cert      # refresh Cosmos trust manually; ld-reset already does it
 ld-user             # local Cosmos user for the be-backend-sso run configuration
 ```
 
-`ld-user` exists for one case: `be-backend-sso`, and the `stack-be-fe-sso` compound around it,
-authenticate against DEV B2C but read local databases. The token is real, so the backend looks its user up by normalized email
-in the local Cosmos emulator, where every seeded user is `@testcompany1.loc` or `@testcompany2.loc`
-and yours is not there. Every authenticated request is a 401 until `ld-user` writes it. With no
-argument it uses the checkout's `git config user.email`; `--company` and `--role` override the
-`TESTCOMPANY1` / `companyAdmin` default. It is idempotent, and `ld-reset` wipes the data, so it is
-run again after one.
-
 Docker runs SQL Server, Cosmos DB, Redis, Azurite and the APIM proxy, and `ld-reset` verifies the
 Azure CLI session and runs both seeders after the services are ready. Rider runs the eleven function
 hosts and four frontend modes and keeps both seeders available for manual reruns. The shared
@@ -122,6 +114,32 @@ ld-remove
 They pass the connection string as `-- --connection ...` rather than relying on the environment,
 because `AppDbContextDesignFactory` reads the argument first and only that is guaranteed to be
 present in an agent's non-interactive shell.
+
+### The SSO user
+
+`ld-user` exists for one case: `be-backend-sso`, and the `stack-be-fe-sso` compound around it,
+authenticate against DEV B2C but read the local databases. The token is real, so the backend
+resolves its Loady user by normalized email against the local Cosmos emulator, where every seeded
+user is `@testcompany1.loc` or `@testcompany2.loc` and yours is not. Every authenticated request is
+a 401 until `ld-user` writes one.
+
+```bash
+ld-user                                          # the checkout's git config user.email
+ld-user kirill.starodubtsev@Loady.com            # or an explicit address
+ld-user someone@loady.com --company TESTCOMPANY2 --role companyUser
+ld-vm 'ld-user kirill.starodubtsev@Loady.com'    # the same thing, from the Mac
+```
+
+The address is lowercased and trimmed before anything is written, because that is what the backend
+does to the token's `emails` claim before looking the user up. `Loady.com` and `loady.com` are the
+same user; so are two runs with the same address, which update the one document rather than adding
+a second. `--company` and `--role` default to `TESTCOMPANY1` and `companyAdmin`, and `--id` pins
+the user id, which otherwise derives from the email so that it is stable across runs.
+
+It runs on the VM, because Cosmos and Redis are the containers `ld-reset` starts there, and it
+fails with that advice if the emulator is not reachable. It writes the user and the matching
+`CompanyMembers` entry, then flushes the local Redis, without which the backend keeps serving the
+user it cached by mail before the row existed. `ld-reset` wipes the data, so run it again after one.
 
 ## Agent instructions in the checkout
 
