@@ -79,21 +79,22 @@ to tell them apart — Anton posted them as separate comments a few minutes apar
   `DomainHint`, `Issuer`, `IsEnabled`), decoupled from `Company` entirely, per
   `plans/2026_09_15_sso_domain_storage_option.md`. `SqlCompany` no longer has any SSO fields. Migration
   `20260827141726_AddSsoConfiguration.cs` was intentionally left untouched — you're recreating it by hand.
-- **M:** Investigated.
+- **M:** Investigated in full in `plans/2026_09_15_sso_existing_user_migration.md` — that plan now owns this
+  question (it also folds in a related, more concrete scenario Kirill raised: an existing BASF user with company
+  assignments/roles switching from local password login to SSO). Summary for the thread reply:
   1. Login: existing local-account users are unaffected — routing to SSO only happens when their email domain has
-     `IsSsoEnabled = true`, verified in `auth.utils.ts`/`SsoConfigurationService`. The one real edge case is a local
-     account whose domain gets SSO turned on *after* the account was created — per `sso-docs.md` the SSO user flow
-     has local accounts unchecked, so that account can't use its password afterward. That specific consequence isn't
-     documented anywhere yet.
-  2. Inactivity job: this isn't actually an SSO-specific risk — it's a known Microsoft Graph/B2C limitation.
-     `signInActivity` (what `GetUserIdsAsync` filters on) needs Azure AD Premium P1/P2 + `AuditLog.Read.All`, and
-     Microsoft's own docs say it's "not consistently returned for some users" in B2C tenants even when licensed. If
-     the whole Graph call fails, `GraphService` already fails safe (catches, logs, returns empty — no one gets
-     touched). The real exposure is a local account whose sign-ins just aren't recorded reliably; it would take
-     ~39 months of apparent inactivity (`UserSettings`: 36 + 2 + 1) to actually reach deletion, but nothing in this
-     repo can confirm whether our B2C tenant has the license/permission for this to work correctly at all — that
-     needs checking directly against the tenant (Azure Portal API permissions, or a Graph query against a
-     known-active local test account).
+     `IsSsoEnabled = true`. The one real edge case is a local account whose domain gets SSO turned on *after* the
+     account was created — that account can't use its password afterward (enforced server-side, not just frontend
+     routing: `AuthenticateADB2CPrivateApiPolicy` rejects a mismatched `tfp` claim with 401). Not documented anywhere
+     yet.
+  2. Inactivity job: not actually SSO-specific — a known Microsoft Graph/B2C `signInActivity` reliability limitation
+     that affects every account type. `UserService.InactivateUsersAsync` already excludes every user on an
+     SSO-configured domain outright, so this is moot for SSO users specifically once their domain is enabled;
+     whether the underlying Graph signal is trustworthy at all for anyone else needs checking against the tenant's
+     actual license/permissions, not something this repo can confirm.
+  3. Full existing-user migration analysis (does B2C create a shadow account, do company assignments/roles survive)
+     is in the new plan, including a DEV verification checklist for the one part only Azure AD B2C itself can
+     confirm.
 
 ## Investigation notes (so the "needs your call" items have evidence, not just questions)
 
