@@ -166,8 +166,8 @@ does to the token's `emails` claim before looking the user up. `Loady.com` and `
 same user; so are two runs with the same address, which update the one document rather than adding
 a second.
 
-The document id has to be the **B2C object id**, not any GUID: the backend writes it into `createdBy`
-and `updatedBy` and compares against it to decide what you authored. `B2C_IDS` at the top of
+The document id has to be the **B2C object id**, not any GUID: the backend writes it into
+`createdBy` and `updatedBy` and compares against it to decide what you authored. `B2C_IDS` at the top of
 `scripts/ld-user.py` pairs each address with its id, which is not a secret - it is in every token
 the DEV tenant issues - and `--id` overrides it. An address in neither gets a derived GUID and a
 warning, which is fine for a user nobody signs in as and useless for one who does. When the stored
@@ -187,9 +187,11 @@ with no `CompanyMembers` document at all is an error pointing at `ld-reset`.
 
 It runs on the VM, because Cosmos and Redis are the containers `ld-reset` starts there, and it
 fails with that advice if the emulator is not reachable. Afterwards it flushes the local Redis,
-without which the backend keeps serving the user it cached by mail before the row existed. `ld-reset` wipes the data, so it runs this itself as
-its last step, and a failure there is a warning rather than a failed reset. The calls above are for
-a second address, a different company or role, or a user needed without a reset.
+without which the backend keeps serving the user it cached by mail before the row existed.
+
+`ld-reset` wipes the data, so it runs this itself as its last step, and a failure there is a warning
+rather than a failed reset. The calls above are for a second address, a different company or role,
+or a user needed without a reset.
 
 ## Agent instructions in the checkout
 
