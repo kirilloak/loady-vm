@@ -19,10 +19,11 @@ tracked file here equal to its live counterpart.
 Never synced: `auth.json`, sessions, history, memories, plugins, and anything under
 `~/.claude/projects`.
 
-That table is the machine-wide context both tools load on every session. Project context is synced
-the same way but by a different script: `scripts/sync-agent-files.sh` keeps the instruction files in
-`~/loady-one` equal to `agents/` in this repository, in both directions and with the same
-conflict rule, from its own crontab line every minute.
+That table is the machine-wide context both tools load on every session. Project context is a
+different script with the same conflict rule: `scripts/sync-agent-files.sh` keeps the instruction
+files in `~/loady-one` equal to `agents/` in this repository.
+[docs/remote-development.md](../docs/remote-development.md#agent-instructions-in-the-checkout) says
+why it copies rather than links, and how.
 
 ## The VM only
 

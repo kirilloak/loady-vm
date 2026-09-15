@@ -84,7 +84,7 @@ One fact, one file. Two files stating the same thing will disagree eventually.
 | The `loady-one` checkout as a whole | `agents/loady-one/AGENTS.md` |
 | Loady's own backend conventions | `agents/backend/AGENTS.md` |
 | Loady's Terraform conventions | `agents/infra/AGENTS.md` |
-| Putting all of those in a checkout, and keeping them there | `scripts/sync-agent-files.sh` |
+| Putting all of those in a checkout, and keeping them there | `scripts/sync-agent-files.sh`, explained in `docs/remote-development.md` |
 | Plans and their results | `plans/` |
 
 Link between files with repository-root-relative paths.

@@ -114,6 +114,75 @@ They pass the connection string as `-- --connection ...` rather than relying on 
 because `AppDbContextDesignFactory` reads the argument first and only that is guaranteed to be
 present in an agent's non-interactive shell.
 
+## Agent instructions in the checkout
+
+Claude and Codex have to find Loady's own conventions wherever a session starts, and those
+conventions cannot live in `loady-one`, which the team owns (`AGENTS.md` rule 1). So the files live
+in `agents/` in this repository and `scripts/sync-agent-files.sh` keeps a copy of each in the
+checkout:
+
+| In this repository | In every checkout and worktree |
+|---|---|
+| `agents/loady-one/AGENTS.md` and `CLAUDE.md` | `AGENTS.md`, `CLAUDE.md` at the root |
+| `agents/backend/` | `backend/AGENTS.md`, `backend/CLAUDE.md` |
+| `agents/infra/` | `infra/AGENTS.md`, `infra/CLAUDE.md` |
+| `dotfiles/rider/run/` | `backend/.run/`, file by file |
+
+`AGENTS.md` holds the content, which Codex reads. `CLAUDE.md` is one line, `@AGENTS.md`, which
+Claude follows. One set of instructions, both tools, no second copy to keep in step.
+
+### Why real files and not symlinks
+
+They were symlinks into this repository first, which is the obvious way to get one file into two
+places. It does not survive contact with the tools.
+
+The measured failure, on `claude` 2.1.272: a `CLAUDE.md` that is a symlink is followed wherever it
+points, but an `@` import inside it is not resolved when the target is outside the project
+directory — and the target of a link into `~/loady-vm` always is. The pointer loaded nothing, in
+every arrangement tried: relative import, dot-relative, absolute, symlinked target, real target.
+The cases are in
+[plans/2026_09_15_agent_files_agents_md_and_cron_result.md](../plans/2026_09_15_agent_files_agents_md_and_cron_result.md).
+
+That is the specific reason, and the general one is the same shape. A command-line tool that walks a
+project — resolving a path, indexing a tree, watching for changes, deciding what is "inside" the
+repository — tends to treat a link out of that tree as something to stop at rather than follow.
+Relying on it puts the setup at the mercy of each tool's path handling, tool by tool and version by
+version. A real file has no such question to answer.
+
+### How the sync works
+
+The same three-way rule as [dotfiles/sync.sh](../dotfiles/README.md), and for the same reason:
+either side is legitimately edited. An agent working in `~/loady-one/backend` that improves the
+backend conventions has edited a file in a repository the founder does not own, and the edit has to
+come back here.
+
+The content each pair was last synced to is kept under `~/.local/state/loady-vm/agents/`, one entry
+per checkout, so:
+
+- a change on one side is copied to the other;
+- a change on **both** sides since the last sync is a conflict: nothing is written and the pair is
+  named on stderr, which cron sends to `journalctl -t loady-agents`. Copy the side you want over
+  the other and the next pass clears it;
+- a file that exists on one side, differs, and has no sync history is refused rather than
+  overwritten. That is the case where the checkout's copy might be a teammate's;
+- in `backend/.run`, a file added on either side is copied to the other, and a file that had been
+  synced and is now gone on one side is removed from both. Rider adds and deletes run
+  configurations through its own UI, so both directions are real.
+
+A crontab line runs it over the checkout and every worktree, every minute:
+
+```
+* * * * * ~/loady-vm/scripts/sync-agent-files.sh --all --quiet | /usr/bin/logger -t loady-agents
+```
+
+`--quiet` means a pass that changes nothing says nothing, so the journal holds changes and conflicts
+only. `sync-agent-files.sh install` writes that line, `infra/bootstrap.sh` calls it on every
+converge, `ld-stn` syncs a new worktree as it creates it, and `ld-agents` runs it by hand.
+
+Every path it manages is in the checkout's `.git/info/exclude`, which is local and never pushed, so
+`git status` in `loady-one` stays empty. The script asserts that at the end of every pass and fails
+loudly if it ever stops being true.
+
 ## Three Linux-only defects, and why the fixes exist
 
 All three are invisible on macOS and Windows, and none of them is fixed by editing `loady-one`. The
